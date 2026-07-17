@@ -1,0 +1,37 @@
+# jobscout scanner configuration.
+# Secrets (credentials, tokens) are NOT here -- they come from environment
+# variables sourced from k8s Secrets, see k8s/secrets.md.
+
+criteria:
+  keywords:
+    - python
+    - devops
+    - platform
+    - oscp
+    - nixos
+    - nix
+    - kubernetes
+    - openshift
+    - linux
+  min_matches: 1
+  target_rate_eur_per_hour: 100
+
+portals:
+  freelancermap:
+    enabled: true
+    search_url: "https://www.freelancermap.de/projekte?created=1&projectContractTypes%5B0%5D=contracting&remoteInPercent%5B0%5D=100&hideAppliedProjects=true&query=%28python+OR+devops+OR+platform+OR+oscp+OR+nixos+OR+nix+OR+kubernetes+OR+openshift+OR+linux%29&countries%5B%5D=1&sort=1"
+    max_pages: 3
+  # solcom, ferchau, hays, randstad, freelance_de: follow later, same shape
+  #   enabled: false
+
+notifications:
+  ntfy:
+    base_url: "https://ntfy.charemma.de"
+    topic: "jobscout"
+
+applications_repo:
+  clone_url: "https://github.com/charemma/jobscout-applications.git"
+  local_path: "/tmp/jobscout-applications"
+
+application_writer:
+  base_url: "http://jobscout-application-writer.jobscout.svc.cluster.local"

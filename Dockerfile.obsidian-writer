@@ -1,0 +1,14 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN useradd --system --uid 10003 --create-home obsidianwriter
+
+COPY obsidian_writer/requirements.txt obsidian_writer/requirements.txt
+RUN pip install --no-cache-dir -r obsidian_writer/requirements.txt
+
+COPY obsidian_writer/ obsidian_writer/
+
+USER obsidianwriter
+EXPOSE 8000
+CMD ["uvicorn", "obsidian_writer.app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,59 @@
+# Only jobscout workload pinned to a specific node: the Obsidian vault is
+# only present on home-node (Syncthing-synced, see infra-config/modules/core.nix).
+# The `vault-access: "true"` node label is set declaratively on home-node's k3s
+# agent config in infra-config (services/k3s/agent.nix), not via `kubectl label`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobscout-obsidian-writer
+  labels:
+    app: jobscout-obsidian-writer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jobscout-obsidian-writer
+  template:
+    metadata:
+      labels:
+        app: jobscout-obsidian-writer
+    spec:
+      nodeSelector:
+        vault-access: "true"
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: obsidian-writer
+          image: ghcr.io/charemma/jobscout-obsidian-writer:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: jobscout-obsidian-writer-secrets
+          env:
+            - name: VAULT_PATH
+              value: /vault
+          volumeMounts:
+            - name: vault
+              mountPath: /vault
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+      volumes:
+        - name: vault
+          hostPath:
+            path: /home/charemma/Documents/Notes
+            type: Directory

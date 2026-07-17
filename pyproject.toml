@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["scanner/tests", "application_writer/tests", "obsidian_writer/tests"]
+
+[tool.ruff]
+line-length = 100

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jobscout-obsidian-writer
+spec:
+  selector:
+    app: jobscout-obsidian-writer
+  ports:
+    - port: 80
+      targetPort: 8000

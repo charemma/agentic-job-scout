@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: jobscout
+resources:
+  - scanner-cronjob.yaml
+  - application-writer-deployment.yaml
+  - application-writer-service.yaml
+  - obsidian-writer-deployment.yaml
+  - obsidian-writer-service.yaml
+images:
+  - name: ghcr.io/charemma/jobscout-scanner
+    newName: ghcr.io/charemma/jobscout-scanner
+    newTag: latest
+  - name: ghcr.io/charemma/jobscout-application-writer
+    newName: ghcr.io/charemma/jobscout-application-writer
+    newTag: latest
+  - name: ghcr.io/charemma/jobscout-obsidian-writer
+    newName: ghcr.io/charemma/jobscout-obsidian-writer
+    newTag: latest

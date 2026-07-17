@@ -1,0 +1,77 @@
+# Local inner-loop: all four services talking to each other over the compose
+# network, no k8s cluster needed. Uses fixture/dummy secrets and a `file://`
+# clone of the local jobscout-applications/cv checkouts instead of real
+# GitHub tokens (see repo.py/store.py/applications_repo.py -- token
+# injection is skipped for non-http(s) schemes for exactly this reason).
+#
+# Assumes the sibling repo layout this project already uses
+# (~/code/charemma/cv, ~/code/charemma/jobscout-applications) -- adjust the
+# build contexts below if yours differs.
+#
+# Usage: just compose-up   (see justfile)
+#        docker compose run --rm scanner   # one-shot, like the real CronJob
+
+services:
+  cv-service:
+    build:
+      context: ../cv
+    ports:
+      - "8001:8000"
+    environment:
+      CV_REPO_CLONE_URL: file:///cv-repo-source
+      CV_REPO_TOKEN: unused-for-file-url
+      CV_SERVICE_TOKEN: dev-cv-service-token
+    volumes:
+      - ../cv:/cv-repo-source:ro
+
+  application-writer:
+    build:
+      context: .
+      dockerfile: Dockerfile.application-writer
+    ports:
+      - "8002:8000"
+    depends_on:
+      - cv-service
+    environment:
+      APPLICATION_WRITER_TOKEN: dev-application-writer-token
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set a real key to actually exercise the LLM pipeline}
+      CV_SERVICE_BASE_URL: http://cv-service:8000
+      CV_SERVICE_TOKEN: dev-cv-service-token
+      APPLICATIONS_REPO_CLONE_URL: file:///applications-repo-source
+      APPLICATIONS_REPO_TOKEN: unused-for-file-url
+      OBSIDIAN_WRITER_BASE_URL: http://obsidian-writer:8000
+      OBSIDIAN_WRITER_TOKEN: dev-obsidian-writer-token
+      NTFY_BASE_URL: https://ntfy.charemma.de
+      NTFY_TOPIC: jobscout-dev
+      NTFY_TOKEN: ${NTFY_TOKEN:?set a real token, or point NTFY_BASE_URL at a throwaway local ntfy container}
+    volumes:
+      - ../jobscout-applications:/applications-repo-source:ro
+
+  obsidian-writer:
+    build:
+      context: .
+      dockerfile: Dockerfile.obsidian-writer
+    ports:
+      - "8003:8000"
+    environment:
+      OBSIDIAN_WRITER_TOKEN: dev-obsidian-writer-token
+      VAULT_PATH: /vault
+    volumes:
+      - ./.devdata/vault:/vault # throwaway scratch vault, not the real one
+
+  scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile.scanner
+    depends_on:
+      - application-writer
+    environment:
+      NTFY_TOKEN: ${NTFY_TOKEN:?set a real token, or point at a throwaway local ntfy container}
+      APPLICATIONS_REPO_TOKEN: unused-for-file-url
+      APPLICATION_WRITER_TOKEN: dev-application-writer-token
+    volumes:
+      # config.yaml's applications_repo.clone_url still points at the real
+      # GitHub repo by default -- for a fully offline compose run, copy
+      # config.yaml to config.local.yaml with clone_url: file:///... (matching
+      # application-writer's mount above) and mount that instead.
+      - ./config.yaml:/app/config.yaml:ro

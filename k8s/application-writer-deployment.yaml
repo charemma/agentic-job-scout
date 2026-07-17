@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobscout-application-writer
+  labels:
+    app: jobscout-application-writer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jobscout-application-writer
+  template:
+    metadata:
+      labels:
+        app: jobscout-application-writer
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: application-writer
+          image: ghcr.io/charemma/jobscout-application-writer:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: jobscout-application-writer-secrets
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30

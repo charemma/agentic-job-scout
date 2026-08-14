@@ -52,6 +52,32 @@ def healthz() -> dict:
     return {"status": "ok"}
 
 
+@app.post("/assess")
+def assess(
+    request: ComposeRequest,
+    authorization: str | None = Header(default=None),
+    x_request_id: str | None = Header(default=None),
+) -> dict:
+    """Cheap LLM fit-check (analysis only, no writing/review/PDF build) --
+    lets the scanner filter out weak matches from broader/noisier portals
+    before spending a full /compose cycle on them. See pipeline.analyse(),
+    reused as-is."""
+    _check_auth(authorization)
+    request_id = x_request_id or request.id
+    log.info("[%s] assessing fit for %s", request_id, request.id)
+
+    profil_tex, common = cv_client.fetch_profile(CV_SERVICE_BASE_URL, CV_SERVICE_TOKEN)
+
+    try:
+        fit = pipeline.analyse(request, profil_tex, common)
+    except pipeline.PipelineError as exc:
+        log.error("[%s] assess failed: %s", request_id, exc)
+        raise HTTPException(status_code=502, detail=f"LLM assessment failed: {exc}") from exc
+
+    log.info("[%s] fit_level=%s", request_id, fit.fit_level)
+    return {"fit_level": fit.fit_level, "summary": fit.summary}
+
+
 @app.post("/compose")
 def compose(
     request: ComposeRequest,

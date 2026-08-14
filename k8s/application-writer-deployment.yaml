@@ -25,6 +25,16 @@ spec:
           envFrom:
             - secretRef:
                 name: jobscout-application-writer-secrets
+          # anthropic_client.py shells out to `claude -p`, authenticated via
+          # this mounted OAuth session -- NOT an ANTHROPIC_API_KEY (that env
+          # var must stay unset here, its presence would override the
+          # subscription-billed OAuth path). See k8s/secrets.md and
+          # anthropic_client.py's docstring for the full rationale.
+          volumeMounts:
+            - name: claude-credentials
+              mountPath: /home/appwriter/.claude/.credentials.json
+              subPath: credentials.json
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /healthz
@@ -37,3 +47,7 @@ spec:
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 30
+      volumes:
+        - name: claude-credentials
+          secret:
+            secretName: jobscout-claude-credentials

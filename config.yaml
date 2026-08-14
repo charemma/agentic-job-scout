@@ -13,16 +13,76 @@ criteria:
     - kubernetes
     - openshift
     - linux
+    - ai security
+    - llm security
+    - prompt injection
+    - red team
+    - adversarial ml
+    - mlsecops
+    - ai governance
+    - genai security
   min_matches: 1
   target_rate_eur_per_hour: 100
+  # LLM-assessed fit_level (from application-writer's /assess) required to
+  # trigger a notification + full /compose draft. Below this, a posting is
+  # logged and skipped -- signal over volume, see candidate-profile.md for
+  # what drives the assessment itself (contract type, remote-only, AI-
+  # Security direction).
+  min_fit_level: solide
+  # Enforced hard in candidate-profile.md for permanent/Festanstellung
+  # postings (contracting stays as before). Also used where a portal search
+  # itself supports a remote filter (see driver configs below).
+  remote_only: true
+  # Round-1 mode (2026-08-13): the candidate wants matching working first, drafts
+  # later. When false, a passing fit_level still gets notified via ntfy but
+  # never triggers /compose -- no CV tailoring, no LaTeX build, no
+  # jobscout-applications commit, no Obsidian note. Flip to true once ready
+  # to actually draft applications.
+  compose_enabled: false
 
+# All portals log in (driver: playwright, uniformly) -- decided 2026-08-14.
+# Anonymous access was only ever verified to return *a* result set, never
+# confirmed to be the *complete* one a logged-in account sees (freelancermap
+# turned out to be outright pagination-gated without login), so this is now
+# the default for every portal rather than an exception for a few.
 portals:
   freelancermap:
     enabled: true
+    driver: playwright
     search_url: "https://www.freelancermap.de/projekte?created=1&projectContractTypes%5B0%5D=contracting&remoteInPercent%5B0%5D=100&hideAppliedProjects=true&query=%28python+OR+devops+OR+platform+OR+oscp+OR+nixos+OR+nix+OR+kubernetes+OR+openshift+OR+linux%29&countries%5B%5D=1&sort=1"
     max_pages: 3
-  # solcom, ferchau, hays, randstad, freelance_de: follow later, same shape
-  #   enabled: false
+
+  randstad:
+    enabled: true
+    driver: playwright
+    # /jobs/q-<keyword>/ facet paths, homeoffice facet included per remote_only
+    search_url: "https://www.randstad.de/jobs/q-python/q-homeoffice/"
+
+  hays:
+    enabled: true
+    driver: playwright
+    search_url: "https://www.hays.de/jobsuche/stellenangebote-jobs"
+
+  solcom:
+    enabled: true
+    driver: playwright
+    search_url: "https://www.solcom.de/de/projektportal/projektangebote"
+
+  xing:
+    enabled: true
+    driver: playwright
+    search_url: "https://www.xing.com/jobs/search?keywords=platform%20engineering%20OR%20ai%20security&remote=true"
+
+  linkedin:
+    enabled: true
+    driver: playwright
+    # f_WT=2 is LinkedIn's own "Remote" work-type filter value
+    search_url: "https://www.linkedin.com/jobs/search/?keywords=platform%20engineering%20OR%20ai%20security&f_WT=2"
+
+  freelance:
+    enabled: true
+    driver: playwright
+    search_url: "https://www.freelance.de/projekte.html?q=python+OR+devops+OR+platform+OR+kubernetes+OR+security"
 
 notifications:
   ntfy:

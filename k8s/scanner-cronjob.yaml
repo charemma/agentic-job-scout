@@ -1,18 +1,28 @@
+# Pinned to home-node (home network, not the VPS's datacenter IP): the
+# xing/linkedin/solcom fetchers use Playwright-driven logins, and a login
+# from a residential IP is meaningfully less bot-suspicious than one from a
+# cloud/VPS IP (see scanner/fetchers/linkedin.py's docstring for the full
+# rationale). The `home-network: "true"` label is set declaratively on
+# home-node's k3s agent config in infra-config (services/k3s/agent.nix),
+# same pattern as obsidian-writer's `vault-access` label -- not `kubectl
+# label`, so it survives a node rebuild.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: jobscout-scanner
 spec:
-  schedule: "0 * * * *"
+  schedule: "0 */6 * * *" # 4x/day, capped per the LinkedIn-cadence agreement
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      backoffLimit: 0 # a failed run is retried next hour by the schedule itself, not immediately
+      backoffLimit: 0 # a failed run is retried next tick by the schedule itself, not immediately
       template:
         spec:
           restartPolicy: Never
+          nodeSelector:
+            home-network: "true"
           imagePullSecrets:
             - name: ghcr-pull-secret
           containers:

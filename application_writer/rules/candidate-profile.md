@@ -76,6 +76,58 @@ Wenn du the candidate gegen eine Stellenbeschreibung mappst:
 3. **Security ist Querschnitt**: Wenn die Stelle Security nennt, ist das fuer the candidate kein Bonus-Skill, sondern in seine Plattform-Arbeit eingebaut -- entsprechend selbstbewusst kalibrieren.
 4. **Frontend = Luecke**: React, Vue, Svelte und moderne BaaS-Stacks (Supabase, Firebase) hat er nicht. Bei solchen Stellen ist der Fit klar geschnitten ("Backend/Plattform-Seite, Frontend nicht im Profil").
 
+## Beschaeftigungsform (Stand 2026-08)
+
+the candidate ist nicht mehr nur an Freelance/Contracting interessiert, sondern seit
+2026-08-12 explizit offen fuer **Festanstellung**, insbesondere Teilzeit
+(50%) fuer 3-4 Monate mit Option auf 100% danach. Contracting bleibt weiter
+attraktiv, ist aber nicht mehr die einzige akzeptierte Form -- beide
+Beschaeftigungsformen werden gleichwertig bewertet, sofern die restlichen
+Kriterien passen.
+
+## Primaerer Fokus: AI-Security
+
+Sein primaeres Interesse liegt aktuell in **AI-Security** -- entweder pur,
+oder in Kombination mit Platform Engineering (z.B. "Security Engineer fuer
+AI/LLM-Infrastruktur", "Platform Engineer mit AI-Security-Anteil"). Das ist
+kein Nice-to-have mehr, sondern die Zielrichtung:
+
+- Stellen mit klarem AI-Security-Bezug (LLM Security, Prompt Injection,
+  AI Red Teaming, AI Governance/Compliance, MLSecOps, Model/Data
+  Poisoning, AI Supply Chain Security) -- **fit_level tendenziell hoeher**
+  gewichten, auch wenn andere Anforderungen nur teilweise erfuellt sind.
+  Sein OSCP + Bug-Bounty-Hintergrund plus praktische LLM/Agent-Erfahrung
+  (Claude, MCP, kuromaku) ist hier ein echter Beleg, kein Lippenbekenntnis.
+- Reine Platform-Engineering-Stellen ohne AI-Security-Bezug bleiben weiterhin
+  gueltige Matches -- AI-Security ist Praeferenz, keine Ausschlussbedingung
+  fuer alles andere.
+
+## Hartes Remote-Kriterium (nur Festanstellung)
+
+**Fuer Festanstellungs-Positionen ist volles Remote eine harte Anforderung.**
+Kein Hybrid, keine Vor-Ort-Pflicht, auch nicht "2 Tage/Woche im Büro".
+
+- Steht in der Stellenbeschreibung explizit Hybrid- oder Vor-Ort-Pflicht bei
+  einer Festanstellung: **`fit_level` maximal `schwach`**, unabhaengig davon
+  wie gut der technische Fit sonst ist. Das ist ein Hard-Cap, keine
+  Abwaegung.
+- Bei Contracting-Projekten gilt diese harte Regel nicht (dort war Remote
+  schon vorher ueber `remoteInPercent` im Portal-Filter abgedeckt) -- die
+  Unterscheidung ist: Festanstellung = hart, Contracting = wie gehabt.
+- Ist der Remote-Status in der Ausschreibung unklar/nicht genannt: nicht
+  automatisch disqualifizieren, aber im `summary` explizit als offene Frage
+  benennen ("Remote-Modell nicht spezifiziert -- pruefen").
+
+## Positives Signal: EU-weit / nicht auf Deutschland begrenzt
+
+Wenn eine Stelle explizit **EU-weit** oder nicht auf Deutschland beschraenkt
+ausgeschrieben ist (z.B. "remote across the EU", "any EU country",
+kein Wohnsitz-/Arbeitsort-Zwang auf DE) -- das ist ein **"Jackpot"**-Signal.
+Im `summary`-Feld explizit hervorheben (z.B. "EU-weit ausgeschrieben --
+Jackpot-Signal"), damit es in der ntfy-Notification sichtbar landet und
+the candidate es auf den ersten Blick erkennt, ohne die volle Ausschreibung lesen zu
+muessen.
+
 ## Was er NICHT macht
 
 - Reine Frontend-Entwicklung (React, Vue, Angular)

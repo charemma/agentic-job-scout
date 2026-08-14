@@ -1,10 +1,10 @@
-"""HTTP client for triggering the application-writer service.
+"""HTTP client for the application-writer service.
 
 Bounded retry/backoff (no tenacity dependency -- this is the only call site
 that needs it, a manual loop is simpler than pulling in a library for one
-use). A failure here must never crash the whole scanner run: the caller
-catches `ComposeError` and moves on to the next posting, leaving this one
-to be retried on the next hourly tick (dedup in store.py only marks a
+use). A failure here must never crash the whole scanner run: callers catch
+`ComposeError`/`AssessError` and move on to the next posting, leaving this
+one to be retried on the next scan tick (dedup in store.py only marks a
 posting "seen" once compose succeeds).
 """
 
@@ -18,10 +18,61 @@ import httpx
 from scanner.models import JobPosting
 
 RETRY_DELAYS_SECONDS = [1, 4, 16]
+# application-writer's anthropic_client.py now shells out to `claude -p`
+# (subscription-billed CLI, not the direct API) with its own 180s subprocess
+# timeout per completion call -- noticeably slower and more variable than a
+# raw API call was. Set comfortably above that so the scanner doesn't give
+# up on a /assess call (one completion) that's still legitimately running
+# server-side. /compose chains up to 4 completions (analyse, write, review,
+# possible write+review retry) sequentially -- if it starts timing out once
+# compose_enabled is flipped back on, this needs to grow further or /compose
+# needs its own larger timeout, not necessarily the same one as /assess.
+REQUEST_TIMEOUT_SECONDS = 200.0
 
 
 class ComposeError(RuntimeError):
     pass
+
+
+class AssessError(RuntimeError):
+    pass
+
+
+def _posting_payload(posting: JobPosting, matched_keywords: list[str]) -> dict:
+    payload = {**asdict(posting), "matched_keywords": matched_keywords}
+    if payload.get("published_at"):
+        payload["published_at"] = posting.published_at.isoformat()
+    return payload
+
+
+def _post_with_retry(url: str, payload: dict, headers: dict, error_cls: type[Exception], what: str) -> dict:
+    last_error: Exception | None = None
+    for attempt, delay in enumerate([0, *RETRY_DELAYS_SECONDS]):
+        if delay:
+            time.sleep(delay)
+        try:
+            response = httpx.post(url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as exc:
+            last_error = exc
+
+    raise error_cls(f"{what} failed after {len(RETRY_DELAYS_SECONDS) + 1} attempts: {last_error}")
+
+
+def assess_fit(
+    base_url: str,
+    token: str,
+    posting: JobPosting,
+    matched_keywords: list[str],
+    request_id: str,
+) -> dict:
+    """Cheap LLM fit-check (no drafting/PDF build) -- returns {fit_level, summary}."""
+    payload = _posting_payload(posting, matched_keywords)
+    headers = {"Authorization": f"Bearer {token}", "X-Request-ID": request_id}
+    return _post_with_retry(
+        f"{base_url.rstrip('/')}/assess", payload, headers, AssessError, f"assess for {posting.id}"
+    )
 
 
 def trigger_compose(
@@ -31,32 +82,8 @@ def trigger_compose(
     matched_keywords: list[str],
     request_id: str,
 ) -> None:
-    payload = {**asdict(posting), "matched_keywords": matched_keywords}
-    if payload.get("published_at"):
-        payload["published_at"] = posting.published_at.isoformat()
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "X-Request-ID": request_id,
-    }
-
-    last_error: Exception | None = None
-    for attempt, delay in enumerate([0, *RETRY_DELAYS_SECONDS]):
-        if delay:
-            time.sleep(delay)
-        try:
-            response = httpx.post(
-                f"{base_url.rstrip('/')}/compose",
-                json=payload,
-                headers=headers,
-                timeout=30.0,
-            )
-            response.raise_for_status()
-            return
-        except httpx.HTTPError as exc:
-            last_error = exc
-
-    raise ComposeError(
-        f"application-writer /compose failed for {posting.id} after "
-        f"{len(RETRY_DELAYS_SECONDS) + 1} attempts: {last_error}"
+    payload = _posting_payload(posting, matched_keywords)
+    headers = {"Authorization": f"Bearer {token}", "X-Request-ID": request_id}
+    _post_with_retry(
+        f"{base_url.rstrip('/')}/compose", payload, headers, ComposeError, f"application-writer /compose for {posting.id}"
     )

@@ -17,8 +17,6 @@ class Secrets:
     ntfy_token: str
     applications_repo_token: str
     application_writer_token: str
-    freelancermap_username: str | None = None
-    freelancermap_password: str | None = None
 
     @classmethod
     def from_env(cls) -> "Secrets":
@@ -26,9 +24,18 @@ class Secrets:
             ntfy_token=_require_env("NTFY_TOKEN"),
             applications_repo_token=_require_env("APPLICATIONS_REPO_TOKEN"),
             application_writer_token=_require_env("APPLICATION_WRITER_TOKEN"),
-            freelancermap_username=os.environ.get("FREELANCERMAP_USERNAME"),
-            freelancermap_password=os.environ.get("FREELANCERMAP_PASSWORD"),
         )
+
+    def credentials_for(self, portal_name: str) -> tuple[str, str] | None:
+        """(username, password) for a portal, read from `<PORTAL>_USER` /
+        `<PORTAL>_PASS` env vars. Returns None if either is unset -- adding a
+        new portal never requires touching this class (Open/Closed)."""
+        prefix = portal_name.upper()
+        user = os.environ.get(f"{prefix}_USER")
+        password = os.environ.get(f"{prefix}_PASS")
+        if not user or not password:
+            return None
+        return user, password
 
 
 def _require_env(name: str) -> str:

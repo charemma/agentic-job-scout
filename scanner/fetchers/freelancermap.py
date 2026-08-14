@@ -5,16 +5,27 @@ full result set for the current page is embedded as a JSON blob in a
 `<script type="application/json" data-component-name="ProjectSearch">` tag,
 not scraped from rendered HTML. That JSON is what this module parses -- it's
 the same data the page hydrates from, so it's far less brittle than CSS
-selectors against markup that can change with any frontend redesign.
+selectors against markup that can change with any frontend redesign. This
+part is unchanged and still well-tested (see tests/test_freelancermap.py)
+regardless of how the page HTML was obtained.
 
-Verified 2026-07-17 against the live search URL the candidate provided: the search
-itself requires no login (plain GET, HTTP 200, full result JSON present).
-`hideAppliedProjects` is accepted as a query param but its effect without an
-authenticated session is unverified -- if login turns out to matter later
-(e.g. for `hideAppliedProjects` or contact details), add a `_login()` helper
-here using `config["credentials"]`; the config shape already has a slot for
-it (see `k8s/secrets.md`), but no login flow has been implemented or tested
-yet -- do not assume one exists.
+**Login required, confirmed 2026-08-14**: anonymous requests only ever see
+page 1 (~22 results) -- `pagenr=2`/`3` silently return page 1 again, gated
+by what the site's own frontend strings call a `pagination_forbidden_modal`
+("Registrieren Sie sich, um mehr Suchergebnisse zu sehen"). This module now
+logs in via Playwright (`ctx.browser`, `FREELANCERMAP_USER`/`_PASS`) before
+paginating, so `max_pages` in config.yaml can be raised beyond 1 again.
+
+**Unverified**: the login form selectors below (`get_by_label` on the
+visible field text "E-Mail-Adresse oder Benutzername" / "Passwort" /
+button "Anmelden") are taken from the page's rendered labels, confirmed via
+WebFetch -- but not exercised against a real Chromium session (Playwright
+can't launch on this project's bare NixOS dev host, see the
+multi-portal-expansion plan notes; the real Docker image installs Chromium's
+full apt dependency set and is where this needs a first live run). Whether
+a logged-in session actually unlocks real pagination beyond page 1 is
+*also* unverified -- worth checking on that first live run before assuming
+`max_pages > 1` does anything useful.
 """
 
 from __future__ import annotations
@@ -24,31 +35,55 @@ import re
 from datetime import datetime
 from html import unescape
 
-import httpx
 from bs4 import BeautifulSoup
 
+from scanner.fetchers.base import FetchContext, FetchError
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.freelancermap.de"
 
 
-def fetch(client: httpx.Client, config: dict) -> list[JobPosting]:
+def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
+    if ctx.browser is None:
+        raise FetchError("freelancermap fetcher requires a Playwright browser (driver: playwright)")
+
+    credentials = ctx.credentials.get("freelancermap")
+    if not credentials:
+        raise FetchError("freelancermap fetcher requires FREELANCERMAP_USER/FREELANCERMAP_PASS credentials")
+
     search_url = config["search_url"]
     max_pages = config.get("max_pages", 3)
 
     postings: list[JobPosting] = []
-    for page in range(1, max_pages + 1):
-        page_url = _with_page(search_url, page)
-        response = client.get(page_url, timeout=30.0)
-        response.raise_for_status()
+    try:
+        page = ctx.browser.new_page()
+        try:
+            _login(page, *credentials)
+            for page_num in range(1, max_pages + 1):
+                page_url = _with_page(search_url, page_num)
+                page.goto(page_url, timeout=30_000, wait_until="networkidle")
 
-        raw_items = _extract_results(response.text)
-        if not raw_items:
-            break
+                raw_items = _extract_results(page.content())
+                if not raw_items:
+                    break
 
-        postings.extend(_to_posting(item) for item in raw_items)
+                postings.extend(_to_posting(item) for item in raw_items)
+        finally:
+            page.close()
+    except FetchError:
+        raise
+    except Exception as exc:
+        raise FetchError(f"freelancermap fetch failed: {exc}") from exc
 
     return postings
+
+
+def _login(page, username: str, password: str) -> None:
+    page.goto(f"{BASE_URL}/login", timeout=30_000, wait_until="networkidle")
+    page.get_by_label("E-Mail-Adresse oder Benutzername").fill(username)
+    page.get_by_label("Passwort").fill(password)
+    page.get_by_role("button", name="Anmelden").click()
+    page.wait_for_load_state("networkidle")
 
 
 def _with_page(url: str, page: int) -> str:
@@ -80,7 +115,7 @@ def _to_posting(item: dict) -> JobPosting:
     return JobPosting(
         id=f"freelancermap-{item['id']}",
         portal="freelancermap",
-        title=item["title"],
+        title=item["title"].strip(),
         url=BASE_URL + item["links"]["project"],
         posting_text=_strip_html(item.get("description", "")),
         contract_type=contract.get("type", "unknown"),

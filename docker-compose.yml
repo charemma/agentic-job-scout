@@ -34,7 +34,6 @@ services:
       - cv-service
     environment:
       APPLICATION_WRITER_TOKEN: dev-application-writer-token
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set a real key to actually exercise the LLM pipeline}
       CV_SERVICE_BASE_URL: http://cv-service:8000
       CV_SERVICE_TOKEN: dev-cv-service-token
       APPLICATIONS_REPO_CLONE_URL: file:///applications-repo-source
@@ -46,6 +45,11 @@ services:
       NTFY_TOKEN: ${NTFY_TOKEN:?set a real token, or point NTFY_BASE_URL at a throwaway local ntfy container}
     volumes:
       - ../jobscout-applications:/applications-repo-source:ro
+      # anthropic_client.py shells out to `claude -p`, authenticated via this
+      # mounted OAuth session (subscription billing, not metered API -- see
+      # that module's docstring). Same file as on the host, no separate
+      # `claude login` needed for local dev.
+      - ~/.claude/.credentials.json:/home/appwriter/.claude/.credentials.json:ro
 
   obsidian-writer:
     build:

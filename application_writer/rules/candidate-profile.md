@@ -92,7 +92,11 @@ AI-Security-Bezug. Vorher war AI-Security nur eine Praeferenz/Gewichtung
 ("Platform Engineering ohne AI-Security bleibt gueltig") -- das gilt nicht
 mehr. Reine Platform-Engineering-, DevOps- oder klassische AppSec-Stellen
 **ohne** AI-Security-Bezug sind ab jetzt **kein** gueltiger Match mehr,
-auch wenn der technische Fit sonst exzellent ist.
+auch wenn der technische Fit sonst exzellent ist. Diese Bedingung gilt
+**fuer beide Beschaeftigungsformen** (Festanstellung wie Contracting) --
+was sich je nach Beschaeftigungsform unterscheidet, ist NICHT ob
+AI-Security noetig ist (immer ja), sondern was zusaetzlich noch hart
+verlangt wird, siehe die beiden Unterabschnitte unten.
 
 - **Hard-Gate**: Hat die Stellenbeschreibung keinen erkennbaren
   AI-Security-Bezug (LLM Security, Prompt Injection, AI Red Teaming,
@@ -102,28 +106,37 @@ auch wenn der technische Fit sonst exzellent ist.
   Klassische Application Security, generische IT-Security oder reines
   Platform Engineering/DevOps ohne AI-Bezug zaehlen NICHT als AI-Security,
   auch wenn "Security" im Titel steht.
-- Kombination mit Platform Engineering ist weiterhin willkommen (z.B.
-  "Platform Engineer mit AI-Security-Anteil", "Security Engineer fuer
-  AI/LLM-Infrastruktur") -- entscheidend ist, dass der AI-Security-Anteil
-  tatsaechlich in der Ausschreibung erkennbar ist, nicht nur implizit
-  moeglich waere.
 - Bei echtem AI-Security-Bezug: sein OSCP + Bug-Bounty-Hintergrund plus
   praktische LLM/Agent-Erfahrung (Claude, MCP, kuromaku) ist ein echter
   Beleg, entsprechend selbstbewusst bewerten -- Tool-Luecken sind hier
   keine Disqualifikation.
 
-## Hartes Remote-Kriterium (nur Festanstellung)
+### Bei Contracting/Freelancing: Kombi mit DevOps/Platform Engineering gewuenscht
 
-**Fuer Festanstellungs-Positionen ist volles Remote eine harte Anforderung.**
-Kein Hybrid, keine Vor-Ort-Pflicht, auch nicht "2 Tage/Woche im Büro".
+AI-Security kombiniert mit DevOps oder Platform Engineering ist der
+**Wunschfall**, nicht nur "toleriert" (z.B. "Platform Engineer mit
+AI-Security-Anteil", "Security Engineer fuer AI/LLM-Infrastruktur",
+"DevOps mit MLSecOps-Fokus"). AI-Security bleibt trotzdem Pflicht (siehe
+Hard-Gate oben) -- diese Kombination ist einfach das Profil, das am besten
+zu the candidate passt, entsprechend hoch bewerten wenn beides erkennbar ist.
+
+### Bei Festanstellung: AI-Security UND volles Remote, beides hart
+
+**Stand 2026-08-14, praezisiert:** Fuer Festanstellungs-Positionen muessen
+**beide** Bedingungen gleichzeitig erfuellt sein -- AI-Security-Bezug
+(Hard-Gate oben) UND volles Remote. Kein Hybrid, keine Vor-Ort-Pflicht,
+auch nicht "2 Tage/Woche im Büro". Faellt eine der beiden Bedingungen weg,
+gilt der Match nicht, unabhaengig vom sonstigen technischen Fit.
 
 - Steht in der Stellenbeschreibung explizit Hybrid- oder Vor-Ort-Pflicht bei
   einer Festanstellung: **`fit_level` maximal `schwach`**, unabhaengig davon
   wie gut der technische Fit sonst ist. Das ist ein Hard-Cap, keine
-  Abwaegung.
-- Bei Contracting-Projekten gilt diese harte Regel nicht (dort war Remote
-  schon vorher ueber `remoteInPercent` im Portal-Filter abgedeckt) -- die
-  Unterscheidung ist: Festanstellung = hart, Contracting = wie gehabt.
+  Abwaegung -- und kommt zusaetzlich zum AI-Security-Hard-Gate oben, nicht
+  anstelle davon.
+- Bei Contracting-Projekten gilt diese Remote-Regel nicht als eigener
+  Hard-Cap (dort war Remote schon vorher ueber `remoteInPercent` im
+  Portal-Filter abgedeckt) -- die Unterscheidung ist: Festanstellung =
+  Remote hart, Contracting = wie gehabt ueber den Portal-Filter.
 - Ist der Remote-Status in der Ausschreibung unklar/nicht genannt: nicht
   automatisch disqualifizieren, aber im `summary` explizit als offene Frage
   benennen ("Remote-Modell nicht spezifiziert -- pruefen").

@@ -10,10 +10,10 @@ resources:
 images:
 - name: ghcr.io/charemma/jobscout-application-writer
   newName: ghcr.io/charemma/jobscout-application-writer
-  newTag: sha-56b509b
+  newTag: sha-f55d75e
 - name: ghcr.io/charemma/jobscout-obsidian-writer
   newName: ghcr.io/charemma/jobscout-obsidian-writer
-  newTag: sha-56b509b
+  newTag: sha-f55d75e
 - name: ghcr.io/charemma/jobscout-scanner
   newName: ghcr.io/charemma/jobscout-scanner
-  newTag: sha-56b509b
+  newTag: sha-f55d75e

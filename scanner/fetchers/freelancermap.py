@@ -37,7 +37,7 @@ from html import unescape
 
 from bs4 import BeautifulSoup
 
-from scanner.fetchers.base import FetchContext, FetchError
+from scanner.fetchers.base import FetchContext, FetchError, dismiss_cookie_banner
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.freelancermap.de"
@@ -80,6 +80,7 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
 
 def _login(page, username: str, password: str) -> None:
     page.goto(f"{BASE_URL}/login", timeout=30_000, wait_until="networkidle")
+    dismiss_cookie_banner(page)
     page.get_by_label("E-Mail-Adresse oder Benutzername").fill(username)
     page.get_by_label("Passwort").fill(password)
     page.get_by_role("button", name="Anmelden").click()

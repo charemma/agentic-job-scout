@@ -11,7 +11,13 @@ kind: CronJob
 metadata:
   name: jobscout-scanner
 spec:
-  schedule: "0 */6 * * *" # 4x/day, capped per the LinkedIn-cadence agreement
+  # 6x/day, 8-19 Uhr only -- the candidate doesn't need results overnight, and this
+  # stays comfortably under an hourly cadence for the login-based portals'
+  # bot-detection risk profile. timeZone is explicit because CronJob
+  # schedules default to UTC regardless of the node's own tz (Europe/Athens
+  # per infra-config) -- without this the window would run 2-3h too early.
+  schedule: "0 8-19/2 * * *"
+  timeZone: "Europe/Athens"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3

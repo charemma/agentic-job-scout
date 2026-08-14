@@ -85,22 +85,32 @@ attraktiv, ist aber nicht mehr die einzige akzeptierte Form -- beide
 Beschaeftigungsformen werden gleichwertig bewertet, sofern die restlichen
 Kriterien passen.
 
-## Primaerer Fokus: AI-Security
+## Harte Bedingung: nur AI-Security
 
-Sein primaeres Interesse liegt aktuell in **AI-Security** -- entweder pur,
-oder in Kombination mit Platform Engineering (z.B. "Security Engineer fuer
-AI/LLM-Infrastruktur", "Platform Engineer mit AI-Security-Anteil"). Das ist
-kein Nice-to-have mehr, sondern die Zielrichtung:
+**Stand 2026-08-14, geaendert:** the candidate will nur noch Stellen mit klarem
+AI-Security-Bezug. Vorher war AI-Security nur eine Praeferenz/Gewichtung
+("Platform Engineering ohne AI-Security bleibt gueltig") -- das gilt nicht
+mehr. Reine Platform-Engineering-, DevOps- oder klassische AppSec-Stellen
+**ohne** AI-Security-Bezug sind ab jetzt **kein** gueltiger Match mehr,
+auch wenn der technische Fit sonst exzellent ist.
 
-- Stellen mit klarem AI-Security-Bezug (LLM Security, Prompt Injection,
-  AI Red Teaming, AI Governance/Compliance, MLSecOps, Model/Data
-  Poisoning, AI Supply Chain Security) -- **fit_level tendenziell hoeher**
-  gewichten, auch wenn andere Anforderungen nur teilweise erfuellt sind.
-  Sein OSCP + Bug-Bounty-Hintergrund plus praktische LLM/Agent-Erfahrung
-  (Claude, MCP, kuromaku) ist hier ein echter Beleg, kein Lippenbekenntnis.
-- Reine Platform-Engineering-Stellen ohne AI-Security-Bezug bleiben weiterhin
-  gueltige Matches -- AI-Security ist Praeferenz, keine Ausschlussbedingung
-  fuer alles andere.
+- **Hard-Gate**: Hat die Stellenbeschreibung keinen erkennbaren
+  AI-Security-Bezug (LLM Security, Prompt Injection, AI Red Teaming,
+  AI Governance/Compliance, MLSecOps, Model/Data Poisoning, AI Supply
+  Chain Security, Security-Arbeit an/mit AI-Systemen oder -Infrastruktur)
+  -- **`fit_level` maximal `schwach`**, unabhaengig von allem anderen.
+  Klassische Application Security, generische IT-Security oder reines
+  Platform Engineering/DevOps ohne AI-Bezug zaehlen NICHT als AI-Security,
+  auch wenn "Security" im Titel steht.
+- Kombination mit Platform Engineering ist weiterhin willkommen (z.B.
+  "Platform Engineer mit AI-Security-Anteil", "Security Engineer fuer
+  AI/LLM-Infrastruktur") -- entscheidend ist, dass der AI-Security-Anteil
+  tatsaechlich in der Ausschreibung erkennbar ist, nicht nur implizit
+  moeglich waere.
+- Bei echtem AI-Security-Bezug: sein OSCP + Bug-Bounty-Hintergrund plus
+  praktische LLM/Agent-Erfahrung (Claude, MCP, kuromaku) ist ein echter
+  Beleg, entsprechend selbstbewusst bewerten -- Tool-Luecken sind hier
+  keine Disqualifikation.
 
 ## Hartes Remote-Kriterium (nur Festanstellung)
 

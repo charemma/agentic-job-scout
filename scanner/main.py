@@ -125,7 +125,20 @@ def run() -> None:
                         config, secrets, posting, result.matched_keywords, assessment, compose_enabled
                     )
                 except httpx.HTTPError as exc:
-                    log.error("[%s] ntfy notify failed: %s", request_id, exc)
+                    log.error("[%s] ntfy notify failed, will retry next run: %s", request_id, exc)
+                    continue
+
+                try:
+                    store.mark_seen(
+                        repo_path,
+                        config["applications_repo"]["clone_url"],
+                        secrets.applications_repo_token,
+                        posting,
+                        fit_level,
+                        assessment.get("summary", ""),
+                    )
+                except Exception as exc:
+                    log.error("[%s] mark_seen failed (will re-notify next run): %s", request_id, exc)
 
                 if not compose_enabled:
                     continue

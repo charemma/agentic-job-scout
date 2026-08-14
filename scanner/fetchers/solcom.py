@@ -23,7 +23,7 @@ as freelancermap's original login slot.
 
 from __future__ import annotations
 
-from scanner.fetchers.base import FetchContext, FetchError
+from scanner.fetchers.base import FetchContext, FetchError, dismiss_cookie_banner
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.solcom.de"
@@ -58,6 +58,7 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
 
 def _login(page, username: str, password: str) -> None:
     page.goto(f"{BASE_URL}/de/projektportal/login", timeout=30_000, wait_until="networkidle")
+    dismiss_cookie_banner(page)
     page.fill('input[type="email"], input[name*="user" i]', username)
     page.fill('input[type="password"]', password)
     page.click('button[type="submit"]')

@@ -43,12 +43,18 @@ k8s-validate:
 # One-time interactive LinkedIn login to bootstrap a persisted session for
 # the linkedin fetcher (see scripts/linkedin_login_bootstrap.py). Dedicated
 # minimal venv -- only needs playwright, not the full `venv` recipe's deps.
+# Built under /tmp, not in the repo: this repo is often accessed over NFS
+# (e.g. Mac <-> home-node), and a Python venv's thousands of small files
+# are painfully slow -- and prone to landing corrupted (missing bin/) --
+# over a network filesystem. /tmp is always a real local disk.
 linkedin-session-bootstrap:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ ! -d .venv-linkedin-bootstrap ]; then
-        python3 -m venv .venv-linkedin-bootstrap
-        .venv-linkedin-bootstrap/bin/pip install -q "playwright>=1.45"
+    venv_dir="${TMPDIR:-/tmp}/jobscout-linkedin-bootstrap-venv"
+    if [ ! -x "$venv_dir/bin/python" ]; then
+        rm -rf "$venv_dir"
+        python3 -m venv "$venv_dir"
+        "$venv_dir/bin/pip" install -q "playwright>=1.45"
     fi
-    .venv-linkedin-bootstrap/bin/python -m playwright install chromium
-    .venv-linkedin-bootstrap/bin/python scripts/linkedin_login_bootstrap.py
+    "$venv_dir/bin/python" -m playwright install chromium
+    "$venv_dir/bin/python" scripts/linkedin_login_bootstrap.py

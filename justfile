@@ -40,9 +40,15 @@ compose-down:
 k8s-validate:
     kustomize build k8s/ | kubeconform -strict -summary
 
-# One-time interactive LinkedIn login (non-headless) to bootstrap a
-# persisted session for the linkedin fetcher -- see
-# scripts/linkedin_login_bootstrap.py and scanner/fetchers/linkedin.py's
-# docstring (point 4) for why this exists.
-linkedin-session-bootstrap: venv
-    .venv/bin/python scripts/linkedin_login_bootstrap.py
+# One-time interactive LinkedIn login to bootstrap a persisted session for
+# the linkedin fetcher (see scripts/linkedin_login_bootstrap.py). Dedicated
+# minimal venv -- only needs playwright, not the full `venv` recipe's deps.
+linkedin-session-bootstrap:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -d .venv-linkedin-bootstrap ]; then
+        python3 -m venv .venv-linkedin-bootstrap
+        .venv-linkedin-bootstrap/bin/pip install -q "playwright>=1.45"
+    fi
+    .venv-linkedin-bootstrap/bin/python -m playwright install chromium
+    .venv-linkedin-bootstrap/bin/python scripts/linkedin_login_bootstrap.py

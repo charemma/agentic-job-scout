@@ -43,3 +43,17 @@ spec:
               envFrom:
                 - secretRef:
                     name: jobscout-scanner-secrets
+              volumeMounts:
+                - name: linkedin-session
+                  mountPath: /etc/jobscout-sessions
+                  readOnly: true
+          # optional: true so the CronJob still runs before the session is
+          # ever bootstrapped (see scripts/linkedin_login_bootstrap.py) --
+          # the volume is just empty then, and
+          # Secrets.session_state_path_for() falls back to a fresh login,
+          # same as before this existed.
+          volumes:
+            - name: linkedin-session
+              secret:
+                secretName: jobscout-linkedin-session
+                optional: true

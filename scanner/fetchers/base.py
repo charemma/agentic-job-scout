@@ -5,6 +5,7 @@ modules can import `FetchContext`/`FetchError` without a circular import
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import httpx
 
@@ -22,6 +23,7 @@ class FetchContext:
     http: httpx.Client
     browser: "Browser | None"
     credentials: dict[str, tuple[str, str] | None]
+    session_state_paths: dict[str, Path | None]
 
 
 class FetchError(Exception):

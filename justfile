@@ -39,3 +39,10 @@ compose-down:
 # Render kustomize and schema-check the manifests
 k8s-validate:
     kustomize build k8s/ | kubeconform -strict -summary
+
+# One-time interactive LinkedIn login (non-headless) to bootstrap a
+# persisted session for the linkedin fetcher -- see
+# scripts/linkedin_login_bootstrap.py and scanner/fetchers/linkedin.py's
+# docstring (point 4) for why this exists.
+linkedin-session-bootstrap: venv
+    .venv/bin/python scripts/linkedin_login_bootstrap.py

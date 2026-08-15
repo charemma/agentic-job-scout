@@ -19,6 +19,22 @@ unfamiliar automated login (2FA prompt, CAPTCHA). A failed run here should
 be treated as "needs the candidate to manually clear a verification prompt," not a
 bug to silently retry aggressively.
 
+4. **Persisted session, found necessary 2026-08-15**: a fresh username/
+   password login on every single cron run was itself the bot signal --
+   LinkedIn started throwing a PIN verification checkpoint on essentially
+   every automated login attempt. Fix: `scripts/linkedin_login_bootstrap.py`
+   does one manual interactive login (non-headless, the candidate clears any
+   PIN/2FA by hand) and saves Playwright's `storage_state` (cookies) to a
+   file, which becomes a k8s Secret mounted at
+   `JOBSCOUT_SESSION_DIR/linkedin.json` (see `Secrets.session_state_path_for`
+   in `scanner/config.py`). When that file exists, this fetcher loads it
+   into a new browser context instead of calling `_login()` at all -- no
+   fresh login, no bot signal, no PIN prompt. If the session has expired
+   (redirected back to /login or /checkpoint), this fetcher fails loudly
+   rather than falling back to a fresh login, since that fallback is
+   exactly the behavior that caused the problem -- expiry needs the candidate to
+   re-run the bootstrap script, not a silent retry.
+
 **Unverified**: login form and job-search-result selectors below follow
 LinkedIn's long-standing public markup conventions (`base-card`,
 `base-search-card__title`, etc., used in most LinkedIn scraping writeups),
@@ -43,13 +59,26 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
     if ctx.browser is None:
         raise FetchError("linkedin fetcher requires a Playwright browser (driver: playwright)")
 
-    credentials = ctx.credentials.get("linkedin")
-    if not credentials:
-        raise FetchError("linkedin fetcher requires LINKEDIN_USER/LINKEDIN_PASS credentials")
-
     search_url = config["search_url"]
+    session_state_path = ctx.session_state_paths.get("linkedin")
 
     try:
+        if session_state_path is not None:
+            context = ctx.browser.new_context(storage_state=str(session_state_path))
+            page = context.new_page()
+            try:
+                page.goto(search_url, timeout=30_000, wait_until="networkidle")
+                _check_not_logged_out(page)
+                cards = page.query_selector_all("div.base-card, li.jobs-search-results__list-item")
+                return [_to_posting(card) for card in cards]
+            finally:
+                page.close()
+                context.close()
+
+        credentials = ctx.credentials.get("linkedin")
+        if not credentials:
+            raise FetchError("linkedin fetcher requires LINKEDIN_USER/LINKEDIN_PASS credentials")
+
         page = ctx.browser.new_page()
         try:
             _login(page, *credentials)
@@ -62,6 +91,22 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
         raise
     except Exception as exc:
         raise FetchError(f"linkedin fetch failed: {exc}") from exc
+
+
+def _check_not_logged_out(page) -> None:
+    """A bootstrapped session can expire (LinkedIn invalidates cookies,
+    force-logout, etc.) -- landing back on /login or /checkpoint means the
+    persisted storage_state no longer works. Fail loudly here rather than
+    falling back to `_login()`: a fresh login is exactly the bot signal
+    that made session persistence necessary in the first place (see this
+    module's docstring, point 4). Needs the candidate to re-run
+    scripts/linkedin_login_bootstrap.py, not a silent automated retry."""
+    if "/login" in page.url or "checkpoint" in page.url or "challenge" in page.url:
+        raise FetchError(
+            "linkedin session expired (redirected to login/checkpoint) -- "
+            "re-run scripts/linkedin_login_bootstrap.py and refresh the "
+            "jobscout-linkedin-session secret"
+        )
 
 
 def _login(page, username: str, password: str) -> None:

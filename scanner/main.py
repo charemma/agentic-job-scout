@@ -62,7 +62,12 @@ def run() -> None:
         ctx_credentials = {
             portal_name: secrets.credentials_for(portal_name) for portal_name in config.get("portals", {})
         }
-        ctx = FetchContext(http=http_client, browser=browser, credentials=ctx_credentials)
+        ctx_session_states = {
+            portal_name: secrets.session_state_path_for(portal_name) for portal_name in config.get("portals", {})
+        }
+        ctx = FetchContext(
+            http=http_client, browser=browser, credentials=ctx_credentials, session_state_paths=ctx_session_states
+        )
 
         for portal_name, fetch in enabled_fetchers(config):
             try:

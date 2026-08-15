@@ -77,6 +77,44 @@ kubectl create secret generic jobscout-scanner-secrets \
   --from-literal=FREELANCE_PASS="$FREELANCE_PASS"
 ```
 
+### 2a. jobscout-linkedin-session (persisted login, not username/password)
+
+A fresh username/password login on every cron run was itself the bot
+signal -- LinkedIn started throwing a PIN/2FA verification checkpoint on
+essentially every automated login (found 2026-08-15). Fix: a persisted
+Playwright session (cookies), bootstrapped once interactively and reused
+by the fetcher instead of logging in fresh each time. See
+`scanner/fetchers/linkedin.py`'s docstring (point 4) for the full
+rationale.
+
+```bash
+just linkedin-session-bootstrap
+# opens a real (non-headless) Chromium -- log in manually, clear any
+# PIN/2FA/CAPTCHA challenge by hand, press Enter in the terminal once
+# logged in. Prints the exact kubectl command to run next, which is:
+
+kubectl create secret generic jobscout-linkedin-session \
+  --namespace jobscout \
+  --from-file=linkedin.json=./linkedin_storage_state.json
+
+rm ./linkedin_storage_state.json  # live session credential, don't leave it lying around
+```
+
+Mounted at `/etc/jobscout-sessions/linkedin.json` in the scanner CronJob
+(`k8s/scanner-cronjob.yaml`), read via `Secrets.session_state_path_for()`
+in `scanner/config.py`. `optional: true` on the volume -- the CronJob runs
+fine before this is ever bootstrapped, `linkedin.py` just falls back to a
+fresh `LINKEDIN_USER`/`LINKEDIN_PASS` login (which will likely hit the
+verification checkpoint again, that's expected until this is set up).
+
+**This will also need periodic refresh** if the session ever expires
+(LinkedIn invalidates it, force-logout, etc.) -- `linkedin.py` fails
+loudly with a clear message when that happens rather than silently
+falling back to a fresh login (see the module docstring for why). Re-run
+`just linkedin-session-bootstrap` and `kubectl apply` the new file
+(`--dry-run=client -o yaml | kubectl apply -f -` to update in place, same
+as `jobscout-claude-credentials` below).
+
 ## 3. jobscout-application-writer secrets
 
 **No `ANTHROPIC_API_KEY` here, deliberately.** `application_writer/anthropic_client.py`

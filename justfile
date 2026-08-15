@@ -56,10 +56,12 @@ linkedin-session-bootstrap:
     #!/usr/bin/env bash
     set -euo pipefail
     venv_dir="${TMPDIR:-/tmp}/jobscout-linkedin-bootstrap-venv"
-    if [ ! -x "$venv_dir/bin/python" ]; then
-        rm -rf "$venv_dir"
-        python3 -m venv "$venv_dir"
-        "$venv_dir/bin/pip" install -q -r scanner/requirements.txt
-    fi
+    # pip install always runs, even on a pre-existing venv (idempotent and
+    # fast once cached) -- gating it behind "venv dir doesn't exist yet"
+    # meant a venv created before scanner/requirements.txt gained a new
+    # dependency silently kept missing it forever, exactly what happened
+    # here (found 2026-08-15: httpx missing on a second run).
+    [ -x "$venv_dir/bin/python" ] || python3 -m venv "$venv_dir"
+    "$venv_dir/bin/pip" install -q -r scanner/requirements.txt
     "$venv_dir/bin/python" -m playwright install chromium
     "$venv_dir/bin/python" scripts/linkedin_login_bootstrap.py

@@ -35,18 +35,27 @@ spec:
               mountPath: /home/appwriter/.claude/.credentials.json
               subPath: credentials.json
               readOnly: true
+          # timeoutSeconds explicit -- the 1s k8s default is too tight here.
+          # /assess runs `claude -p` synchronously in a threadpool worker;
+          # under real load (or general node resource pressure) the event
+          # loop can be slow enough to blow past 1s on /healthz even though
+          # the endpoint itself does no work, which was killing the pod
+          # mid-request and turning into intermittent 500s for the caller.
           readinessProbe:
             httpGet:
               path: /healthz
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
       volumes:
         - name: claude-credentials
           secret:

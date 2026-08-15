@@ -30,7 +30,11 @@ def main() -> None:
         browser = playwright.chromium.launch(headless=False)
         context = browser.new_context()
         page = context.new_page()
-        page.goto("https://www.linkedin.com/login", wait_until="networkidle")
+        # "networkidle" reliably times out on LinkedIn -- its pages keep
+        # firing background analytics/presence beacons indefinitely, so
+        # network traffic never actually goes idle even once the page is
+        # fully loaded and interactive. "load" is the right signal here.
+        page.goto("https://www.linkedin.com/login", wait_until="load", timeout=60_000)
 
         print("Browser window opened. Log in manually and clear any PIN/2FA/CAPTCHA")
         print("challenge by hand. Wait until you land on your feed or any logged-in page.")

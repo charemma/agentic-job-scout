@@ -49,10 +49,28 @@ on top of the downstream LLM remote-only enforcement.
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from scanner.fetchers.base import FetchContext, FetchError, dismiss_cookie_banner
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.linkedin.com"
+
+# A plain desktop Chrome UA -- headless Chromium's default fingerprint
+# differs from headed Chrome (older Chromium literally put "HeadlessChrome"
+# in the UA; even current versions can still be distinguished via other
+# signals). More importantly: scripts/linkedin_login_bootstrap.py
+# bootstraps the persisted session in a *headed* browser, but this fetcher
+# replays it in a *headless* one (scanner/browser.py always launches
+# headless=True) -- without pinning the same UA on both sides, the saved
+# session gets replayed under a different fingerprint than the one
+# LinkedIn saw when it was created, itself a plausible bot signal. Pin an
+# identical, ordinary UA in both places instead of leaving it to
+# Playwright's per-mode default.
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
 
 
 def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
@@ -64,10 +82,10 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
 
     try:
         if session_state_path is not None:
-            context = ctx.browser.new_context(storage_state=str(session_state_path))
+            context = ctx.browser.new_context(storage_state=str(session_state_path), user_agent=USER_AGENT)
             page = context.new_page()
             try:
-                page.goto(search_url, timeout=30_000, wait_until="networkidle")
+                page.goto(search_url, timeout=60_000, wait_until="load")
                 _check_not_logged_out(page)
                 cards = page.query_selector_all("div.base-card, li.jobs-search-results__list-item")
                 return [_to_posting(card) for card in cards]
@@ -79,29 +97,45 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
         if not credentials:
             raise FetchError("linkedin fetcher requires LINKEDIN_USER/LINKEDIN_PASS credentials")
 
-        page = ctx.browser.new_page()
+        context = ctx.browser.new_context(user_agent=USER_AGENT)
+        page = context.new_page()
         try:
             _login(page, *credentials)
-            page.goto(search_url, timeout=30_000, wait_until="networkidle")
+            page.goto(search_url, timeout=60_000, wait_until="load")
             cards = page.query_selector_all("div.base-card, li.jobs-search-results__list-item")
             return [_to_posting(card) for card in cards]
         finally:
             page.close()
+            context.close()
     except FetchError:
         raise
     except Exception as exc:
         raise FetchError(f"linkedin fetch failed: {exc}") from exc
 
 
+def _looks_logged_out(url: str) -> bool:
+    """Path-based, not substring -- LinkedIn's own internal post-login
+    redirect hop is /checkpoint/lg/login-submit, a normal part of a
+    *successful* login that a naive "login" or "checkpoint" substring
+    check misidentifies as a failure (found 2026-08-15: aborted a
+    genuinely successful login because "login" matched inside
+    "login-submit"). Only a literal /login path, or a /checkpoint path
+    other than that known-benign hop, counts as logged out/blocked."""
+    path = urlsplit(url).path
+    if path.startswith("/login"):
+        return True
+    return path.startswith("/checkpoint") and path != "/checkpoint/lg/login-submit"
+
+
 def _check_not_logged_out(page) -> None:
     """A bootstrapped session can expire (LinkedIn invalidates cookies,
-    force-logout, etc.) -- landing back on /login or /checkpoint means the
-    persisted storage_state no longer works. Fail loudly here rather than
-    falling back to `_login()`: a fresh login is exactly the bot signal
-    that made session persistence necessary in the first place (see this
-    module's docstring, point 4). Needs the candidate to re-run
+    force-logout, etc.) -- landing back on /login or a real /checkpoint
+    means the persisted storage_state no longer works. Fail loudly here
+    rather than falling back to `_login()`: a fresh login is exactly the
+    bot signal that made session persistence necessary in the first place
+    (see this module's docstring, point 4). Needs the candidate to re-run
     scripts/linkedin_login_bootstrap.py, not a silent automated retry."""
-    if "/login" in page.url or "checkpoint" in page.url or "challenge" in page.url:
+    if _looks_logged_out(page.url):
         raise FetchError(
             "linkedin session expired (redirected to login/checkpoint) -- "
             "re-run scripts/linkedin_login_bootstrap.py and refresh the "
@@ -110,13 +144,13 @@ def _check_not_logged_out(page) -> None:
 
 
 def _login(page, username: str, password: str) -> None:
-    page.goto(f"{BASE_URL}/login", timeout=30_000, wait_until="networkidle")
+    page.goto(f"{BASE_URL}/login", timeout=60_000, wait_until="load")
     dismiss_cookie_banner(page)
     page.fill("#username", username)
     page.fill("#password", password)
     page.click('button[type="submit"]')
-    page.wait_for_load_state("networkidle")
-    if "checkpoint" in page.url or "challenge" in page.url:
+    page.wait_for_load_state("load")
+    if _looks_logged_out(page.url):
         raise FetchError("linkedin login hit a verification checkpoint -- needs manual clearance")
 
 

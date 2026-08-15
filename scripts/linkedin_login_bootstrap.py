@@ -20,15 +20,25 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))  # running this script directly doesn't put the repo root on sys.path
+
 from playwright.sync_api import sync_playwright
 
-OUTPUT_PATH = Path(__file__).resolve().parent.parent / "linkedin_storage_state.json"
+from scanner.fetchers.linkedin import USER_AGENT  # noqa: E402 -- must follow the sys.path insert above
+
+OUTPUT_PATH = REPO_ROOT / "linkedin_storage_state.json"
 
 
 def main() -> None:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=False)
-        context = browser.new_context()
+        # Same USER_AGENT as scanner/fetchers/linkedin.py uses to replay
+        # this session headless -- if the fingerprint differs between
+        # bootstrap and replay, that mismatch is itself a plausible bot
+        # signal. See linkedin.py's USER_AGENT docstring for the full
+        # rationale.
+        context = browser.new_context(user_agent=USER_AGENT)
         page = context.new_page()
         # "networkidle" reliably times out on LinkedIn -- its pages keep
         # firing background analytics/presence beacons indefinitely, so
@@ -40,8 +50,17 @@ def main() -> None:
         print("challenge by hand. Wait until you land on your feed or any logged-in page.")
         input("Press Enter here once you're fully logged in... ")
 
-        if "/login" in page.url or "checkpoint" in page.url or "challenge" in page.url:
-            print("Still looks logged out (URL is still /login or /checkpoint) -- aborting.", file=sys.stderr)
+        # URL substring checks are unreliable here: LinkedIn's own
+        # internal post-login redirect hop is
+        # https://www.linkedin.com/checkpoint/lg/login-submit -- a normal
+        # part of a *successful* login, but "login" in "login-submit"
+        # false-positives any "/login" or "checkpoint" substring check
+        # (found 2026-08-15, aborted a genuinely successful login). The
+        # actual login form being gone is a much more reliable signal.
+        page.wait_for_load_state("load")
+        still_showing_login_form = page.query_selector("#username") is not None
+        if still_showing_login_form:
+            print("Still looks logged out (login form is still showing) -- aborting.", file=sys.stderr)
             browser.close()
             sys.exit(1)
 

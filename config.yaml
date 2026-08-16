@@ -71,13 +71,22 @@ portals:
   xing:
     enabled: true
     driver: playwright
-    search_url: "https://www.xing.com/jobs/search?keywords=platform%20engineering%20OR%20ai%20security&remote=true"
+    # Phrases quoted (%22...%22) around each OR-term -- found 2026-08-16:
+    # the unquoted version (`platform engineering OR ai security`) returned
+    # 0 results despite jobs matching this existing daily on the site.
+    # freelancermap's working query wraps single-word OR terms in parens
+    # (no quoting needed there since each term is one word); multi-word
+    # phrases need quoting too or "OR" isn't reliably parsed as boolean.
+    # Unverified against a live run yet -- if this still returns 0, the
+    # next suspect is the result-card selectors themselves, not the query.
+    search_url: "https://www.xing.com/jobs/search?keywords=%22platform%20engineering%22%20OR%20%22ai%20security%22&remote=true"
 
   linkedin:
     enabled: true
     driver: playwright
-    # f_WT=2 is LinkedIn's own "Remote" work-type filter value
-    search_url: "https://www.linkedin.com/jobs/search/?keywords=platform%20engineering%20OR%20ai%20security&f_WT=2"
+    # f_WT=2 is LinkedIn's own "Remote" work-type filter value. Phrases
+    # quoted for the same reason as xing's search_url above.
+    search_url: "https://www.linkedin.com/jobs/search/?keywords=%22platform%20engineering%22%20OR%20%22ai%20security%22&f_WT=2"
 
   freelance:
     enabled: true

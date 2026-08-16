@@ -51,7 +51,7 @@ from __future__ import annotations
 
 from urllib.parse import urlsplit
 
-from scanner.fetchers.base import FetchContext, FetchError, dismiss_cookie_banner
+from scanner.fetchers import base
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.linkedin.com"
@@ -73,9 +73,9 @@ USER_AGENT = (
 )
 
 
-def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
+def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
     if ctx.browser is None:
-        raise FetchError("linkedin fetcher requires a Playwright browser (driver: playwright)")
+        raise base.FetchError("linkedin fetcher requires a Playwright browser (driver: playwright)")
 
     search_url = config["search_url"]
     session_state_path = ctx.session_state_paths.get("linkedin")
@@ -85,7 +85,7 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
             context = ctx.browser.new_context(storage_state=str(session_state_path), user_agent=USER_AGENT)
             page = context.new_page()
             try:
-                page.goto(search_url, timeout=60_000, wait_until="load")
+                base.goto(page, search_url)
                 _check_not_logged_out(page)
                 cards = page.query_selector_all("div.base-card, li.jobs-search-results__list-item")
                 return [_to_posting(card) for card in cards]
@@ -95,22 +95,22 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
 
         credentials = ctx.credentials.get("linkedin")
         if not credentials:
-            raise FetchError("linkedin fetcher requires LINKEDIN_USER/LINKEDIN_PASS credentials")
+            raise base.FetchError("linkedin fetcher requires LINKEDIN_USER/LINKEDIN_PASS credentials")
 
         context = ctx.browser.new_context(user_agent=USER_AGENT)
         page = context.new_page()
         try:
             _login(page, *credentials)
-            page.goto(search_url, timeout=60_000, wait_until="load")
+            base.goto(page, search_url)
             cards = page.query_selector_all("div.base-card, li.jobs-search-results__list-item")
             return [_to_posting(card) for card in cards]
         finally:
             page.close()
             context.close()
-    except FetchError:
+    except base.FetchError:
         raise
     except Exception as exc:
-        raise FetchError(f"linkedin fetch failed: {exc}") from exc
+        raise base.FetchError(f"linkedin fetch failed: {exc}") from exc
 
 
 def _looks_logged_out(url: str) -> bool:
@@ -136,7 +136,7 @@ def _check_not_logged_out(page) -> None:
     (see this module's docstring, point 4). Needs the candidate to re-run
     scripts/linkedin_login_bootstrap.py, not a silent automated retry."""
     if _looks_logged_out(page.url):
-        raise FetchError(
+        raise base.FetchError(
             "linkedin session expired (redirected to login/checkpoint) -- "
             "re-run scripts/linkedin_login_bootstrap.py and refresh the "
             "jobscout-linkedin-session secret"
@@ -144,14 +144,14 @@ def _check_not_logged_out(page) -> None:
 
 
 def _login(page, username: str, password: str) -> None:
-    page.goto(f"{BASE_URL}/login", timeout=60_000, wait_until="load")
-    dismiss_cookie_banner(page)
+    base.goto(page, f"{BASE_URL}/login")
+    base.dismiss_cookie_banner(page)
     page.fill("#username", username)
     page.fill("#password", password)
     page.click('button[type="submit"]')
     page.wait_for_load_state("load")
     if _looks_logged_out(page.url):
-        raise FetchError("linkedin login hit a verification checkpoint -- needs manual clearance")
+        raise base.FetchError("linkedin login hit a verification checkpoint -- needs manual clearance")
 
 
 def _to_posting(card) -> JobPosting:

@@ -23,7 +23,7 @@ as freelancermap's original login slot.
 
 from __future__ import annotations
 
-from scanner.fetchers.base import FetchContext, FetchError, dismiss_cookie_banner
+from scanner.fetchers import base
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.solcom.de"
@@ -33,9 +33,9 @@ LOCATION_SELECTOR = ".project-teaser__location, .location"
 LINK_SELECTOR = "a"
 
 
-def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
+def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
     if ctx.browser is None:
-        raise FetchError("solcom fetcher requires a Playwright browser (driver: playwright)")
+        raise base.FetchError("solcom fetcher requires a Playwright browser (driver: playwright)")
 
     search_url = config["search_url"]
     credentials = ctx.credentials.get("solcom")
@@ -45,20 +45,20 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
         try:
             if credentials:
                 _login(page, *credentials)
-            page.goto(search_url, timeout=30_000, wait_until="networkidle")
+            base.goto(page, search_url)
             cards = page.query_selector_all(RESULT_SELECTOR)
             return [_to_posting(card) for card in cards]
         finally:
             page.close()
-    except FetchError:
+    except base.FetchError:
         raise
     except Exception as exc:
-        raise FetchError(f"solcom fetch failed: {exc}") from exc
+        raise base.FetchError(f"solcom fetch failed: {exc}") from exc
 
 
 def _login(page, username: str, password: str) -> None:
-    page.goto(f"{BASE_URL}/de/projektportal/login", timeout=30_000, wait_until="networkidle")
-    dismiss_cookie_banner(page)
+    base.goto(page, f"{BASE_URL}/de/projektportal/login")
+    base.dismiss_cookie_banner(page)
     page.fill('input[type="email"], input[name*="user" i]', username)
     page.fill('input[type="password"]', password)
     page.click('button[type="submit"]')

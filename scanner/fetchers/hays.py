@@ -31,19 +31,19 @@ from __future__ import annotations
 
 from bs4 import BeautifulSoup
 
-from scanner.fetchers.base import FetchContext, FetchError, dismiss_cookie_banner
+from scanner.fetchers import base
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.hays.de"
 
 
-def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
+def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
     if ctx.browser is None:
-        raise FetchError("hays fetcher requires a Playwright browser (driver: playwright)")
+        raise base.FetchError("hays fetcher requires a Playwright browser (driver: playwright)")
 
     credentials = ctx.credentials.get("hays")
     if not credentials:
-        raise FetchError("hays fetcher requires HAYS_USER/HAYS_PASS credentials")
+        raise base.FetchError("hays fetcher requires HAYS_USER/HAYS_PASS credentials")
 
     search_url = config["search_url"]
 
@@ -51,22 +51,22 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
         page = ctx.browser.new_page()
         try:
             _login(page, *credentials)
-            page.goto(search_url, timeout=30_000, wait_until="networkidle")
+            base.goto(page, search_url)
             html = page.content()
         finally:
             page.close()
-    except FetchError:
+    except base.FetchError:
         raise
     except Exception as exc:
-        raise FetchError(f"hays fetch failed: {exc}") from exc
+        raise base.FetchError(f"hays fetch failed: {exc}") from exc
 
     soup = BeautifulSoup(html, "html.parser")
     return [_to_posting(block) for block in soup.select(".search__result")]
 
 
 def _login(page, username: str, password: str) -> None:
-    page.goto(f"{BASE_URL}/login", timeout=30_000, wait_until="networkidle")
-    dismiss_cookie_banner(page)
+    base.goto(page, f"{BASE_URL}/login")
+    base.dismiss_cookie_banner(page)
     page.get_by_label("E-Mail").fill(username)
     page.get_by_label("Passwort").fill(password)
     page.get_by_role("button", name="Anmelden").click()

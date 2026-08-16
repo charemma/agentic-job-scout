@@ -37,19 +37,19 @@ from html import unescape
 
 from bs4 import BeautifulSoup
 
-from scanner.fetchers.base import FetchContext, FetchError, dismiss_cookie_banner
+from scanner.fetchers import base
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.freelancermap.de"
 
 
-def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
+def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
     if ctx.browser is None:
-        raise FetchError("freelancermap fetcher requires a Playwright browser (driver: playwright)")
+        raise base.FetchError("freelancermap fetcher requires a Playwright browser (driver: playwright)")
 
     credentials = ctx.credentials.get("freelancermap")
     if not credentials:
-        raise FetchError("freelancermap fetcher requires FREELANCERMAP_USER/FREELANCERMAP_PASS credentials")
+        raise base.FetchError("freelancermap fetcher requires FREELANCERMAP_USER/FREELANCERMAP_PASS credentials")
 
     search_url = config["search_url"]
     max_pages = config.get("max_pages", 3)
@@ -61,7 +61,7 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
             _login(page, *credentials)
             for page_num in range(1, max_pages + 1):
                 page_url = _with_page(search_url, page_num)
-                page.goto(page_url, timeout=30_000, wait_until="networkidle")
+                base.goto(page, page_url)
 
                 raw_items = _extract_results(page.content())
                 if not raw_items:
@@ -70,17 +70,17 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
                 postings.extend(_to_posting(item) for item in raw_items)
         finally:
             page.close()
-    except FetchError:
+    except base.FetchError:
         raise
     except Exception as exc:
-        raise FetchError(f"freelancermap fetch failed: {exc}") from exc
+        raise base.FetchError(f"freelancermap fetch failed: {exc}") from exc
 
     return postings
 
 
 def _login(page, username: str, password: str) -> None:
-    page.goto(f"{BASE_URL}/login", timeout=30_000, wait_until="networkidle")
-    dismiss_cookie_banner(page)
+    base.goto(page, f"{BASE_URL}/login")
+    base.dismiss_cookie_banner(page)
     page.get_by_label("E-Mail-Adresse oder Benutzername").fill(username)
     page.get_by_label("Passwort").fill(password)
     page.get_by_role("button", name="Anmelden").click()

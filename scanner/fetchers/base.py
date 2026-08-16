@@ -58,3 +58,16 @@ def dismiss_cookie_banner(page, timeout_ms: int = 3000) -> None:
             return
         except Exception:
             continue
+
+
+def goto(page, url: str, *, timeout_ms: int = 60_000) -> None:
+    """Every fetcher's navigation, in one place. Was duplicated verbatim
+    (`page.goto(url, timeout=30_000, wait_until="networkidle")`) across
+    every portal module -- `wait_until="networkidle"` reliably times out on
+    real-world sites that fire background analytics/presence beacons
+    indefinitely (confirmed 2026-08-15 on linkedin.py, then found to be the
+    same root cause behind hays.py's login timeout too, since both used the
+    identical copy-pasted line). Fixing it once here, instead of per-portal,
+    is the point -- `wait_until="load"` is a property of how Playwright
+    waits for navigation, not something that should vary per site."""
+    page.goto(url, timeout=timeout_ms, wait_until="load")

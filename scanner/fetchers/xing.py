@@ -16,19 +16,19 @@ solcom.py/linkedin.py.
 
 from __future__ import annotations
 
-from scanner.fetchers.base import FetchContext, FetchError, dismiss_cookie_banner
+from scanner.fetchers import base
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.xing.com"
 
 
-def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
+def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
     if ctx.browser is None:
-        raise FetchError("xing fetcher requires a Playwright browser (driver: playwright)")
+        raise base.FetchError("xing fetcher requires a Playwright browser (driver: playwright)")
 
     credentials = ctx.credentials.get("xing")
     if not credentials:
-        raise FetchError("xing fetcher requires XING_USER/XING_PASS credentials")
+        raise base.FetchError("xing fetcher requires XING_USER/XING_PASS credentials")
 
     search_url = config["search_url"]
 
@@ -36,20 +36,20 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
         page = ctx.browser.new_page()
         try:
             _login(page, *credentials)
-            page.goto(search_url, timeout=30_000, wait_until="networkidle")
+            base.goto(page, search_url)
             cards = page.query_selector_all('[data-testid="job-search-result"], article')
             return [_to_posting(card) for card in cards]
         finally:
             page.close()
-    except FetchError:
+    except base.FetchError:
         raise
     except Exception as exc:
-        raise FetchError(f"xing fetch failed: {exc}") from exc
+        raise base.FetchError(f"xing fetch failed: {exc}") from exc
 
 
 def _login(page, username: str, password: str) -> None:
-    page.goto(f"{BASE_URL}/login", timeout=30_000, wait_until="networkidle")
-    dismiss_cookie_banner(page)
+    base.goto(page, f"{BASE_URL}/login")
+    base.dismiss_cookie_banner(page)
     page.fill('input[type="email"], input[name="username"]', username)
     page.fill('input[type="password"]', password)
     page.click('button[type="submit"]')

@@ -30,20 +30,20 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from scanner.fetchers.base import FetchContext, FetchError, dismiss_cookie_banner
+from scanner.fetchers import base
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.randstad.de"
 _ROUTE_DATA_MARKER = "window.__ROUTE_DATA__"
 
 
-def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
+def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
     if ctx.browser is None:
-        raise FetchError("randstad fetcher requires a Playwright browser (driver: playwright)")
+        raise base.FetchError("randstad fetcher requires a Playwright browser (driver: playwright)")
 
     credentials = ctx.credentials.get("randstad")
     if not credentials:
-        raise FetchError("randstad fetcher requires RANDSTAD_USER/RANDSTAD_PASS credentials")
+        raise base.FetchError("randstad fetcher requires RANDSTAD_USER/RANDSTAD_PASS credentials")
 
     search_url = config["search_url"]
 
@@ -51,22 +51,22 @@ def fetch(ctx: FetchContext, config: dict) -> list[JobPosting]:
         page = ctx.browser.new_page()
         try:
             _login(page, *credentials)
-            page.goto(search_url, timeout=30_000, wait_until="networkidle")
+            base.goto(page, search_url)
             data = _extract_route_data(page.content())
         finally:
             page.close()
-    except FetchError:
+    except base.FetchError:
         raise
     except Exception as exc:
-        raise FetchError(f"randstad fetch failed: {exc}") from exc
+        raise base.FetchError(f"randstad fetch failed: {exc}") from exc
 
     hits = data.get("searchResults", {}).get("hits", {}).get("hits", [])
     return [_to_posting(hit["_source"]) for hit in hits]
 
 
 def _login(page, username: str, password: str) -> None:
-    page.goto(f"{BASE_URL}/mein-randstad/login/", timeout=30_000, wait_until="networkidle")
-    dismiss_cookie_banner(page)
+    base.goto(page, f"{BASE_URL}/mein-randstad/login/")
+    base.dismiss_cookie_banner(page)
     page.get_by_label("E-Mail").fill(username)
     page.get_by_label("Passwort").fill(password)
     page.get_by_role("button", name="Anmelden").click()

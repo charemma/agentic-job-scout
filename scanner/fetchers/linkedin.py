@@ -35,12 +35,21 @@ bug to silently retry aggressively.
    exactly the behavior that caused the problem -- expiry needs the candidate to
    re-run the bootstrap script, not a silent retry.
 
-**Unverified**: login form and job-search-result selectors below follow
-LinkedIn's long-standing public markup conventions (`base-card`,
-`base-search-card__title`, etc., used in most LinkedIn scraping writeups),
-but could not be confirmed against a live authenticated session during
-implementation (no interactive login/2FA available in this environment).
-Needs a live run + selector check before being trusted, same as solcom.py.
+**Result-card selectors verified against a live authenticated session,
+2026-08-16**: the original guessed selectors (`base-card`,
+`base-search-card__title`, etc. -- public LinkedIn scraping-writeup
+conventions) matched nothing against the real authenticated job-search
+markup, which is why every prior run returned 0 postings despite the
+search itself finding real results (confirmed via an HTML dump of a live
+`/jobs/search/` response -- LinkedIn had even auto-selected a
+`currentJobId` in the URL). The real per-card container is
+`li[data-occludable-job-id]`; title/URL come from
+`a.job-card-container__link` (`aria-label` has the clean title text, no
+nested-span parsing needed); company is `.artdeco-entity-lockup__subtitle`;
+location/remote info is `.artdeco-entity-lockup__caption`. Login-form
+selectors (`#username`/`#password`) are unrelated and still unverified --
+`_login()` is rarely exercised now that the persisted session (point 4
+below) is the normal path.
 
 `f_WT=2` is LinkedIn's own documented query param for "Remote" work type --
 used here to push remote-filtering to the portal itself where possible,
@@ -87,7 +96,7 @@ def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
             try:
                 base.goto(page, search_url)
                 _check_not_logged_out(page)
-                cards = page.query_selector_all("div.base-card, li.jobs-search-results__list-item")
+                cards = _wait_for_result_cards(page)
                 return [_to_posting(card) for card in cards]
             finally:
                 page.close()
@@ -102,7 +111,7 @@ def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
         try:
             _login(page, *credentials)
             base.goto(page, search_url)
-            cards = page.query_selector_all("div.base-card, li.jobs-search-results__list-item")
+            cards = _wait_for_result_cards(page)
             return [_to_posting(card) for card in cards]
         finally:
             page.close()
@@ -143,6 +152,23 @@ def _check_not_logged_out(page) -> None:
         )
 
 
+_RESULT_CARD_SELECTOR = "li[data-occludable-job-id]"
+
+
+def _wait_for_result_cards(page):
+    """The results list hydrates via Ember JS after the initial page load,
+    so cards may not exist in the DOM the instant base.goto() returns.
+    Best-effort wait, not a hard requirement -- a query that genuinely has
+    zero matches is a valid outcome, not a failure, so a timeout here just
+    falls through to query_selector_all() returning an empty list rather
+    than raising."""
+    try:
+        page.wait_for_selector(_RESULT_CARD_SELECTOR, timeout=10_000)
+    except Exception:
+        pass
+    return page.query_selector_all(_RESULT_CARD_SELECTOR)
+
+
 def _login(page, username: str, password: str) -> None:
     base.goto(page, f"{BASE_URL}/login")
     base.dismiss_cookie_banner(page)
@@ -155,14 +181,16 @@ def _login(page, username: str, password: str) -> None:
 
 
 def _to_posting(card) -> JobPosting:
-    title_el = card.query_selector(".base-search-card__title, h3")
-    company_el = card.query_selector(".base-search-card__subtitle, h4")
-    location_el = card.query_selector(".job-search-card__location")
-    link_el = card.query_selector("a.base-card__full-link, a")
+    link_el = card.query_selector("a.job-card-container__link")
+    company_el = card.query_selector(".artdeco-entity-lockup__subtitle")
+    location_el = card.query_selector(".artdeco-entity-lockup__caption")
 
-    title = title_el.inner_text().strip() if title_el else ""
-    url = (link_el.get_attribute("href") or "").split("?")[0] if link_el else ""
-    job_id = url.rstrip("/").rsplit("-", 1)[-1] or title
+    # aria-label carries the clean job title text directly -- no need to
+    # dig into the nested <span><strong> markup for it.
+    title = (link_el.get_attribute("aria-label") or "").strip() if link_el else ""
+    href = (link_el.get_attribute("href") or "") if link_el else ""
+    url = f"{BASE_URL}{href.split('?')[0]}" if href.startswith("/") else href.split("?")[0]
+    job_id = card.get_attribute("data-occludable-job-id") or url.rstrip("/").rsplit("/", 1)[-1] or title
 
     return JobPosting(
         id=f"linkedin-{job_id}",

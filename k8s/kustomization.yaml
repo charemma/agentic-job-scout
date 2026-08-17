@@ -16,4 +16,4 @@ images:
   newTag: sha-1fa9bd8
 - name: ghcr.io/charemma/jobscout-scanner
   newName: ghcr.io/charemma/jobscout-scanner
-  newTag: sha-1fa9bd8
+  newTag: sha-fe0babd

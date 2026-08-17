@@ -2,6 +2,17 @@
 # Secrets (credentials, tokens) are NOT here -- they come from environment
 # variables sourced from k8s Secrets, see k8s/secrets.md.
 
+scanner:
+  # How many matched postings' assess -> notify -> compose pipeline run
+  # concurrently. Sequential processing was taking 15-20+ min/run once a
+  # couple dozen postings matched -- each /assess call is a `claude -p`
+  # completion (30-50s typical, several minutes when application-writer's
+  # retry/timeout logic kicks in on a slow one) -- and these are otherwise
+  # independent postings, safe to overlap. The git commit/push to
+  # jobscout-applications in store.mark_seen() stays serialized (main.py
+  # locks around it) regardless of this value.
+  assess_concurrency: 4
+
 criteria:
   keywords:
     - python

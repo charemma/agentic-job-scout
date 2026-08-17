@@ -113,7 +113,7 @@ loudly with a clear message when that happens rather than silently
 falling back to a fresh login (see the module docstring for why). Re-run
 `just linkedin-session-bootstrap` and `kubectl apply` the new file
 (`--dry-run=client -o yaml | kubectl apply -f -` to update in place, same
-as `jobscout-claude-credentials` below).
+as `jobscout-claude-token` below).
 
 ## 3. jobscout-application-writer secrets
 

@@ -9,7 +9,10 @@ logged and does not abort the rest of the run.
 from __future__ import annotations
 
 import logging
+import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
@@ -21,6 +24,7 @@ from scanner.config import Secrets, load_config
 from scanner.fetchers import FetchError, enabled_fetchers
 from scanner.fetchers.base import FetchContext
 from scanner.matcher import match
+from scanner.models import JobPosting
 from scanner.notifier import notify
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -30,6 +34,12 @@ log = logging.getLogger("jobscout.scanner")
 # weakest to strongest. min_fit_level in config.yaml sets the noise-reduction
 # bar for triggering a notification + full /compose draft.
 _FIT_LEVEL_RANK = {"schwach": 0, "solide": 1, "stark": 2}
+
+
+@dataclass
+class _PostingOutcome:
+    assessed: bool = False
+    composed: bool = False
 
 
 def run() -> None:
@@ -57,8 +67,12 @@ def run() -> None:
     # re-serving page 1 for later pages). Cheap, always correct, no reason
     # not to have it regardless of the root cause on any given portal.
     seen_ids: set[str] = set()
+    assess_concurrency = config.get("scanner", {}).get("assess_concurrency", 4)
+    mark_seen_lock = threading.Lock()
 
-    with httpx.Client(follow_redirects=True) as http_client, maybe_playwright(config) as browser:
+    with httpx.Client(follow_redirects=True) as http_client, maybe_playwright(config) as browser, ThreadPoolExecutor(
+        max_workers=assess_concurrency
+    ) as executor:
         ctx_credentials = {
             portal_name: secrets.credentials_for(portal_name) for portal_name in config.get("portals", {})
         }
@@ -69,6 +83,7 @@ def run() -> None:
             http=http_client, browser=browser, credentials=ctx_credentials, session_state_paths=ctx_session_states
         )
 
+        futures = []
         for portal_name, fetch in enabled_fetchers(config):
             try:
                 postings = fetch(ctx, config["portals"][portal_name])
@@ -101,64 +116,27 @@ def run() -> None:
                     ", ".join(result.matched_keywords),
                 )
 
-                try:
-                    assessment = assess_fit(
-                        config["application_writer"]["base_url"],
-                        secrets.application_writer_token,
-                        posting,
-                        result.matched_keywords,
-                        request_id,
-                    )
-                except AssessError as exc:
-                    log.error("[%s] assess failed, skipping: %s", request_id, exc)
-                    continue
-
-                assessed_count += 1
-                fit_level = assessment.get("fit_level", "schwach")
-                if _FIT_LEVEL_RANK.get(fit_level, 0) < min_fit_rank:
-                    log.info("[%s] fit_level=%s below threshold, skipping", request_id, fit_level)
-                    continue
-
-                log.info(
-                    "[%s] fit_level=%s -- notifying%s",
-                    request_id,
-                    fit_level,
-                    " + drafting" if compose_enabled else " (drafting disabled, compose_enabled=false)",
-                )
-                try:
-                    _notify_match_found(
-                        config, secrets, posting, result.matched_keywords, assessment, compose_enabled
-                    )
-                except httpx.HTTPError as exc:
-                    log.error("[%s] ntfy notify failed, will retry next run: %s", request_id, exc)
-                    continue
-
-                try:
-                    store.mark_seen(
+                futures.append(
+                    executor.submit(
+                        _process_matched_posting,
+                        config,
+                        secrets,
                         repo_path,
-                        config["applications_repo"]["clone_url"],
-                        secrets.applications_repo_token,
-                        posting,
-                        fit_level,
-                        assessment.get("summary", ""),
-                    )
-                except Exception as exc:
-                    log.error("[%s] mark_seen failed (will re-notify next run): %s", request_id, exc)
-
-                if not compose_enabled:
-                    continue
-
-                try:
-                    trigger_compose(
-                        config["application_writer"]["base_url"],
-                        secrets.application_writer_token,
                         posting,
                         result.matched_keywords,
                         request_id,
+                        min_fit_rank,
+                        compose_enabled,
+                        mark_seen_lock,
                     )
-                    triggered_count += 1
-                except ComposeError as exc:
-                    log.error("[%s] %s", request_id, exc)
+                )
+
+        for future in futures:
+            outcome = future.result()
+            if outcome.assessed:
+                assessed_count += 1
+            if outcome.composed:
+                triggered_count += 1
 
     log.info(
         "run complete: fetched=%d matched=%d assessed=%d composed_triggered=%d",
@@ -167,6 +145,87 @@ def run() -> None:
         assessed_count,
         triggered_count,
     )
+
+
+def _process_matched_posting(
+    config: dict,
+    secrets: Secrets,
+    repo_path: Path,
+    posting: JobPosting,
+    matched_keywords: list[str],
+    request_id: str,
+    min_fit_rank: int,
+    compose_enabled: bool,
+    mark_seen_lock: threading.Lock,
+) -> _PostingOutcome:
+    """Assess -> notify -> mark_seen -> compose for one matched posting.
+
+    Runs in a worker thread, one per matched posting -- see
+    `assess_concurrency` in config.yaml. Only the mark_seen() git commit/push
+    is serialized (shared working tree); assess/notify/compose calls are
+    independent HTTP requests and safe to run fully concurrently.
+    """
+    outcome = _PostingOutcome()
+
+    try:
+        assessment = assess_fit(
+            config["application_writer"]["base_url"],
+            secrets.application_writer_token,
+            posting,
+            matched_keywords,
+            request_id,
+        )
+    except AssessError as exc:
+        log.error("[%s] assess failed, skipping: %s", request_id, exc)
+        return outcome
+
+    outcome.assessed = True
+    fit_level = assessment.get("fit_level", "schwach")
+    if _FIT_LEVEL_RANK.get(fit_level, 0) < min_fit_rank:
+        log.info("[%s] fit_level=%s below threshold, skipping", request_id, fit_level)
+        return outcome
+
+    log.info(
+        "[%s] fit_level=%s -- notifying%s",
+        request_id,
+        fit_level,
+        " + drafting" if compose_enabled else " (drafting disabled, compose_enabled=false)",
+    )
+    try:
+        _notify_match_found(config, secrets, posting, matched_keywords, assessment, compose_enabled)
+    except httpx.HTTPError as exc:
+        log.error("[%s] ntfy notify failed, will retry next run: %s", request_id, exc)
+        return outcome
+
+    with mark_seen_lock:
+        try:
+            store.mark_seen(
+                repo_path,
+                config["applications_repo"]["clone_url"],
+                secrets.applications_repo_token,
+                posting,
+                fit_level,
+                assessment.get("summary", ""),
+            )
+        except Exception as exc:
+            log.error("[%s] mark_seen failed (will re-notify next run): %s", request_id, exc)
+
+    if not compose_enabled:
+        return outcome
+
+    try:
+        trigger_compose(
+            config["application_writer"]["base_url"],
+            secrets.application_writer_token,
+            posting,
+            matched_keywords,
+            request_id,
+        )
+        outcome.composed = True
+    except ComposeError as exc:
+        log.error("[%s] %s", request_id, exc)
+
+    return outcome
 
 
 def _notify_match_found(

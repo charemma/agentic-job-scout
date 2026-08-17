@@ -2,15 +2,21 @@
 
 Shells out to the `claude` binary instead of calling the Anthropic Messages
 API directly. Deliberate choice, made 2026-08-14: with `ANTHROPIC_API_KEY`
-unset and a valid `claude login` session present (mounted into the
-container as a k8s Secret -- see k8s/secrets.md), `claude -p` authenticates
-via that OAuth/keychain session and usage is billed against the Claude
-Code subscription instead of metered per-token API pricing. Verified
-locally on `home-node` (headless invocation works without a TTY) and
-confirmed by the candidate's own experience running kuromaku the same way, with no
-API charges. Mirrors kuro's actual production pattern (CLI shellout), not
-its unused `Backend::Api` direct-API code path -- see the project's memory
-notes for that history.
+unset and `CLAUDE_CODE_OAUTH_TOKEN` set (from `claude setup-token`, see
+k8s/secrets.md), `claude -p` authenticates via that long-lived OAuth token
+and usage is billed against the Claude Code subscription instead of
+metered per-token API pricing. Verified locally on `home-node` (headless
+invocation works without a TTY) and confirmed by the candidate's own experience
+running kuromaku the same way, with no API charges. Mirrors kuro's actual
+production pattern (CLI shellout), not its unused `Backend::Api` direct-API
+code path -- see the project's memory notes for that history.
+
+Switched 2026-08-17 from a mounted `credentials.json` (copied from a local
+`claude login` session) to `CLAUDE_CODE_OAUTH_TOKEN`: the mounted-file
+approach shared a rotating refresh token between the local CLI session and
+the cluster, so whichever side refreshed first silently revoked the
+other's copy -- a recurring, hard-to-diagnose failure. `setup-token`
+produces an independent, long-lived (1 year) token with no such collision.
 
 Deliberately does **not** pass `--bare`: that flag forces
 `ANTHROPIC_API_KEY`/apiKeyHelper-only auth and skips OAuth/keychain entirely,

@@ -26,15 +26,21 @@ spec:
             - secretRef:
                 name: jobscout-application-writer-secrets
           # anthropic_client.py shells out to `claude -p`, authenticated via
-          # this mounted OAuth session -- NOT an ANTHROPIC_API_KEY (that env
-          # var must stay unset here, its presence would override the
-          # subscription-billed OAuth path). See k8s/secrets.md and
-          # anthropic_client.py's docstring for the full rationale.
-          volumeMounts:
-            - name: claude-credentials
-              mountPath: /home/appwriter/.claude/.credentials.json
-              subPath: credentials.json
-              readOnly: true
+          # CLAUDE_CODE_OAUTH_TOKEN below -- NOT an ANTHROPIC_API_KEY (that
+          # env var must stay unset here, its presence would override the
+          # subscription-billed OAuth path). This token comes from
+          # `claude setup-token`, run once inside a throwaway pod using this
+          # same image (so it's a fully independent session, not a copy of
+          # anyone's local `claude login` session -- avoids the refresh-token
+          # collision that a shared/copied credentials.json had). Valid 1
+          # year. See k8s/secrets.md and anthropic_client.py's docstring for
+          # the full rationale.
+          env:
+            - name: CLAUDE_CODE_OAUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: jobscout-claude-token
+                  key: token
           # timeoutSeconds explicit -- the 1s k8s default is too tight here.
           # /assess runs `claude -p` synchronously in a threadpool worker;
           # under real load (or general node resource pressure) the event
@@ -56,7 +62,3 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3
-      volumes:
-        - name: claude-credentials
-          secret:
-            secretName: jobscout-claude-credentials

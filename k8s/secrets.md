@@ -118,13 +118,13 @@ as `jobscout-claude-credentials` below).
 ## 3. jobscout-application-writer secrets
 
 **No `ANTHROPIC_API_KEY` here, deliberately.** `application_writer/anthropic_client.py`
-shells out to `claude -p` (Claude Code CLI), authenticated via a mounted
-OAuth session instead -- billed against the Claude Code subscription, not
-metered API pricing (see that module's docstring for the full rationale and
-verification). Setting `ANTHROPIC_API_KEY` in this Secret would silently
-switch it back to metered billing (API key takes precedence over the OAuth
-session), so don't add it here even if you have one lying around from the
-old implementation.
+shells out to `claude -p` (Claude Code CLI), authenticated via
+`CLAUDE_CODE_OAUTH_TOKEN` instead -- billed against the Claude Code
+subscription, not metered API pricing (see that module's docstring for the
+full rationale and verification). Setting `ANTHROPIC_API_KEY` in this Secret
+would silently switch it back to metered billing (API key takes precedence
+over the OAuth token), so don't add it here even if you have one lying
+around from the old implementation.
 
 ```bash
 kubectl create secret generic jobscout-application-writer-secrets \
@@ -141,26 +141,63 @@ kubectl create secret generic jobscout-application-writer-secrets \
   --from-literal=NTFY_TOKEN="$NTFY_TOKEN"
 ```
 
-### 3a. jobscout-claude-credentials (Claude Code login session)
+### 3a. jobscout-claude-token (Claude Code long-lived OAuth token)
 
-A **separate** Secret, mounted as a file (not env vars) at
-`/home/appwriter/.claude/.credentials.json` in the application-writer
-Deployment (see `k8s/application-writer-deployment.yaml`). Created from a
-real `claude login` session -- easiest to just copy the file that's already
-on `home-node` (the candidate is logged in there for interactive Claude Code use):
+A **separate** Secret, injected as the `CLAUDE_CODE_OAUTH_TOKEN` env var in
+the application-writer Deployment (see
+`k8s/application-writer-deployment.yaml`).
+
+**History:** originally this was `jobscout-claude-credentials`, a mounted
+`credentials.json` copied from a real interactive `claude login` session on
+`home-node`. That shared a single rotating refresh token between the local
+CLI and the cluster pod -- whichever side refreshed first silently revoked
+the other's copy, causing recurring, confusing 401s
+(`OAuth access token has been revoked`). Replaced 2026-08-17 with a token
+from `claude setup-token`, which is a fully independent session with no
+such collision, valid for 1 year.
+
+**How to (re-)generate**, since `setup-token` needs an interactive
+browser step and there's no reason to expose that flow on a long-running
+pod:
 
 ```bash
-kubectl create secret generic jobscout-claude-credentials \
+# throwaway debug pod, same image, no secret mounts
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: claude-login-debug
+  namespace: jobscout
+spec:
+  restartPolicy: Never
+  imagePullSecrets:
+    - name: ghcr-pull-secret
+  containers:
+    - name: claude-login-debug
+      image: ghcr.io/charemma/jobscout-application-writer:latest
+      command: ["sleep", "3600"]
+      stdin: true
+      tty: true
+EOF
+kubectl wait --for=condition=Ready pod/claude-login-debug -n jobscout --timeout=60s
+
+# run interactively yourself -- opens a URL, prompts for a code
+kubectl exec -it -n jobscout claude-login-debug -- claude setup-token
+
+# copy the printed token, then:
+kubectl create secret generic jobscout-claude-token \
   --namespace jobscout \
-  --from-file=credentials.json=/home/charemma/.claude/.credentials.json
+  --from-literal=token="$CLAUDE_CODE_OAUTH_TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl delete pod claude-login-debug -n jobscout
+kubectl rollout restart deployment/jobscout-application-writer -n jobscout
 ```
 
-**This needs periodic refresh** -- OAuth tokens rotate; re-run the command
-above (it'll need `--dry-run=client -o yaml | kubectl apply -f -` to
-update in place) whenever `claude -p` in the pod starts failing auth.
-Sharing this file also means application-writer's Claude usage draws from
-the same subscription quota as the candidate's interactive Claude Code sessions --
-worth keeping in mind if usage limits ever get tight.
+Valid for 1 year from creation -- next refresh due around 2027-08-17.
+Application-writer's Claude usage still draws from the same subscription
+quota as the candidate's interactive sessions (unchanged from before), worth
+keeping in mind if usage limits ever get tight.
 
 ## 4. jobscout-obsidian-writer secrets
 

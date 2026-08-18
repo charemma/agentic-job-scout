@@ -115,6 +115,33 @@ falling back to a fresh login (see the module docstring for why). Re-run
 (`--dry-run=client -o yaml | kubectl apply -f -` to update in place, same
 as `jobscout-claude-token` below).
 
+### 2b. jobscout-xing-session (persisted login, not username/password)
+
+Same pattern and rationale as `jobscout-linkedin-session` above, adopted
+2026-08-18 for a different reason: `xing.py`'s original `_login()` guessed
+`https://www.xing.com/login`, which is a plain 404 -- Xing's real login
+lives on a separate `login.xing.com` subdomain, a JS SPA with no
+server-rendered form to inspect safely without logging a real account out
+first. See `scanner/fetchers/xing.py`'s docstring for the full story.
+
+```bash
+just xing-session-bootstrap
+# opens a real (non-headless) Chromium -- log in manually, clear any
+# 2FA/CAPTCHA challenge by hand, press Enter in the terminal once logged
+# in. Prints the exact kubectl command to run next, which is:
+
+kubectl create secret generic jobscout-xing-session \
+  --namespace jobscout \
+  --from-file=xing.json=./xing_storage_state.json
+
+rm ./xing_storage_state.json  # live session credential, don't leave it lying around
+```
+
+Mounted at `/etc/jobscout-sessions/xing.json` in the scanner CronJob, same
+`optional: true` fallback-to-fresh-login behavior, same periodic-refresh
+need if the session expires -- re-run `just xing-session-bootstrap` and
+re-apply.
+
 ## 3. jobscout-application-writer secrets
 
 **No `ANTHROPIC_API_KEY` here, deliberately.** `application_writer/anthropic_client.py`

@@ -43,17 +43,33 @@ spec:
               envFrom:
                 - secretRef:
                     name: jobscout-scanner-secrets
+              # Each portal's session file is mounted individually via
+              # subPath into the same JOBSCOUT_SESSION_DIR
+              # (/etc/jobscout-sessions) rather than mounting each secret's
+              # whole directory -- two directory-level mounts can't share
+              # one path, and Secrets.session_state_path_for() expects
+              # every portal's <portal>.json to live side by side in one
+              # directory.
               volumeMounts:
                 - name: linkedin-session
-                  mountPath: /etc/jobscout-sessions
+                  mountPath: /etc/jobscout-sessions/linkedin.json
+                  subPath: linkedin.json
                   readOnly: true
-          # optional: true so the CronJob still runs before the session is
-          # ever bootstrapped (see scripts/linkedin_login_bootstrap.py) --
-          # the volume is just empty then, and
+                - name: xing-session
+                  mountPath: /etc/jobscout-sessions/xing.json
+                  subPath: xing.json
+                  readOnly: true
+          # optional: true so the CronJob still runs before a given
+          # session is ever bootstrapped (see scripts/*_login_bootstrap.py)
+          # -- that portal's file is just absent then, and
           # Secrets.session_state_path_for() falls back to a fresh login,
-          # same as before this existed.
+          # same as before session persistence existed.
           volumes:
             - name: linkedin-session
               secret:
                 secretName: jobscout-linkedin-session
+                optional: true
+            - name: xing-session
+              secret:
+                secretName: jobscout-xing-session
                 optional: true

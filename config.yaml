@@ -60,18 +60,35 @@ portals:
   freelancermap:
     enabled: true
     driver: playwright
-    search_url: "https://www.freelancermap.de/projekte?created=1&projectContractTypes%5B0%5D=contracting&remoteInPercent%5B0%5D=100&hideAppliedProjects=true&query=%28python+OR+devops+OR+platform+OR+oscp+OR+nixos+OR+nix+OR+kubernetes+OR+openshift+OR+linux%29&countries%5B%5D=1&sort=1"
+    # 2026-08-18: added the ai-security terms from criteria.keywords -- the
+    # query previously only had the broad platform/devops terms, so with
+    # the AI-Security hard-gate in candidate-profile.md, everything this
+    # portal ever fetched was structurally incapable of passing (matched
+    # on "platform"/"devops" but never even contained an AI-Security term
+    # to begin with). Same root cause as xing/linkedin's query, just never
+    # applied here since freelancermap's query was already "working" in
+    # the sense of returning results -- just not the right ones anymore.
+    search_url: "https://www.freelancermap.de/projekte?created=1&projectContractTypes%5B0%5D=contracting&remoteInPercent%5B0%5D=100&hideAppliedProjects=true&query=%28python+OR+devops+OR+platform+OR+oscp+OR+nixos+OR+nix+OR+kubernetes+OR+openshift+OR+linux+OR+%22ai+security%22+OR+%22llm+security%22+OR+%22prompt+injection%22+OR+%22red+team%22+OR+%22adversarial+ml%22+OR+mlsecops+OR+%22ai+governance%22+OR+%22genai+security%22%29&countries%5B%5D=1&sort=1"
     max_pages: 3
 
   randstad:
     enabled: true
     driver: playwright
-    # /jobs/q-<keyword>/ facet paths, homeoffice facet included per remote_only
-    search_url: "https://www.randstad.de/jobs/q-python/q-homeoffice/"
+    # /jobs/q-<keyword>/ facet paths -- only supports ONE search term, no OR
+    # syntax at all (unlike the other portals). Switched from "python" to
+    # "ai-security" 2026-08-18: since candidate-profile.md's hard-gate now
+    # requires AI-Security relevance for every match regardless of tech
+    # stack, a single-term search should spend its one shot on the
+    # mandatory criterion, not an optional one. Unverified live -- if this
+    # returns 0 results, randstad's slug format may need a different
+    # encoding (try "ai+security" or "ai%20security").
+    search_url: "https://www.randstad.de/jobs/q-ai-security/q-homeoffice/"
 
   hays:
     enabled: true
-    driver: playwright
+    # httpx, not playwright -- reverted 2026-08-18, see hays.py's docstring:
+    # hays.de has no self-service login (its /login is SAML SSO, confirmed
+    # live), so there was never anything requiring a real browser here.
     search_url: "https://www.hays.de/jobsuche/stellenangebote-jobs"
 
   solcom:
@@ -85,11 +102,12 @@ portals:
     # Phrases quoted (%22...%22) around each OR-term -- found 2026-08-16:
     # the unquoted version (`platform engineering OR ai security`) returned
     # 0 results despite jobs matching this existing daily on the site.
-    # freelancermap's working query wraps single-word OR terms in parens
-    # (no quoting needed there since each term is one word); multi-word
-    # phrases need quoting too or "OR" isn't reliably parsed as boolean.
-    # Unverified against a live run yet -- if this still returns 0, the
-    # next suspect is the result-card selectors themselves, not the query.
+    # Confirmed correct 2026-08-18 in a live authenticated session:
+    # "999+ jobs found" for this exact query. The 0-results problem was
+    # never the query -- it was that xing.py's login always failed first
+    # (guessed a /login URL that's a 404; real login is a separate
+    # login.xing.com subdomain), so no run ever got as far as the search
+    # itself. See xing.py's docstring for the persisted-session fix.
     search_url: "https://www.xing.com/jobs/search?keywords=%22platform%20engineering%22%20OR%20%22ai%20security%22&remote=true"
 
   linkedin:

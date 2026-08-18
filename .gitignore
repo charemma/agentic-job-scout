@@ -12,3 +12,4 @@ result-*
 .devdata/
 config.local.yaml
 linkedin_storage_state.json
+xing_storage_state.json

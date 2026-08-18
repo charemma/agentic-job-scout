@@ -8,17 +8,23 @@ challenge -- Cloudflare's JS challenge generally passes for a real Chromium
 session, especially from a residential IP (this fetcher only makes sense
 running from `home-node`, same rationale as xing/linkedin).
 
-**Unverified**: the exact result-card selectors below are a best-effort
-guess (solcom's markup could not be inspected directly -- Cloudflare blocked
-every fetch attempt during implementation, including from a script). Treat
-this fetcher as needing a live selector-verification pass (open the search
-URL in a real browser, `page.content()` it, adjust `RESULT_SELECTOR` etc.)
-before trusting its output -- do not assume it works untested, unlike
-freelancermap/randstad/hays which were verified against live responses.
+Result-card and login selectors verified live 2026-08-18 (a real browser
+sails straight through the Cloudflare challenge, no interstitial hit):
+`search_url` redirects to `/fuer-freelancer/projektliste`, where each
+result is an `article.project-offer-card` -- confirmed by cross-checking
+the count (335) against the page's own "335 Treffer" label. Title/link is
+`a.project-offer-card__title-link` inside the card's `h2`. The four
+`.project-offer-card__meta-item` `<li>`s are always
+[duration, start_date, location, contract_type] in that fixed order
+(checked across multiple cards); description text is
+`.project-offer-card__description`.
 
 Login (`ctx.credentials["solcom"]`) is wired but its effect (does it change
-what the anonymous search shows?) is also unverified -- same open question
-as freelancermap's original login slot.
+what the anonymous search shows?) is still unverified -- same open question
+as freelancermap's original login slot. The login form itself is a Drupal
+user-login block (`#edit-name`/`#edit-pass`/`#edit-submit`), confirmed live
+2026-08-18, replacing a guessed `input[type="email"]` selector that never
+matched (the username field is `type="text"`, not `"email"`).
 """
 
 from __future__ import annotations
@@ -27,10 +33,10 @@ from scanner.fetchers import base
 from scanner.models import JobPosting
 
 BASE_URL = "https://www.solcom.de"
-RESULT_SELECTOR = "article.project-teaser, div.project-list-item"
-TITLE_SELECTOR = "h2, h3, .project-teaser__title"
-LOCATION_SELECTOR = ".project-teaser__location, .location"
-LINK_SELECTOR = "a"
+RESULT_SELECTOR = "article.project-offer-card"
+TITLE_LINK_SELECTOR = "a.project-offer-card__title-link"
+META_ITEM_SELECTOR = ".project-offer-card__meta-item"
+DESCRIPTION_SELECTOR = ".project-offer-card__description"
 
 
 def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
@@ -59,18 +65,23 @@ def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
 def _login(page, username: str, password: str) -> None:
     base.goto(page, f"{BASE_URL}/de/projektportal/login")
     base.dismiss_cookie_banner(page)
-    page.fill('input[type="email"], input[name*="user" i]', username)
-    page.fill('input[type="password"]', password)
-    page.click('button[type="submit"]')
+    # Drupal login form (id="edit-name"/"edit-pass") -- confirmed live
+    # 2026-08-18, replacing a guessed input[type="email"] selector that
+    # never matched (the username field is type="text", not "email").
+    page.fill("#edit-name", username)
+    page.fill("#edit-pass", password)
+    page.click("#edit-submit")
     page.wait_for_load_state("networkidle")
 
 
 def _to_posting(card) -> JobPosting:
-    title_el = card.query_selector(TITLE_SELECTOR)
-    link_el = card.query_selector(LINK_SELECTOR)
-    location_el = card.query_selector(LOCATION_SELECTOR)
+    link_el = card.query_selector(TITLE_LINK_SELECTOR)
+    description_el = card.query_selector(DESCRIPTION_SELECTOR)
+    meta_items = [item.inner_text().strip() for item in card.query_selector_all(META_ITEM_SELECTOR)]
+    # fixed order: [duration, start_date, location, contract_type]
+    location = meta_items[2] if len(meta_items) > 2 else None
 
-    title = title_el.inner_text().strip() if title_el else ""
+    title = link_el.inner_text().strip() if link_el else ""
     href = link_el.get_attribute("href") if link_el else ""
     url = href if href.startswith("http") else f"{BASE_URL}{href}" if href else ""
     job_id = url.rstrip("/").rsplit("/", 1)[-1] or title
@@ -80,12 +91,12 @@ def _to_posting(card) -> JobPosting:
         portal="solcom",
         title=title,
         url=url,
-        posting_text=card.inner_text().strip(),
+        posting_text=description_el.inner_text().strip() if description_el else card.inner_text().strip(),
         contract_type="contracting",  # solcom is freelance/contracting-only
         remote_percent=None,
         company=None,
         contact_name=None,
         contact_email=None,
-        location=location_el.inner_text().strip() if location_el else None,
+        location=location,
         published_at=None,
     )

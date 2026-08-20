@@ -111,6 +111,40 @@ verlangt wird, siehe die beiden Unterabschnitte unten.
   Beleg, entsprechend selbstbewusst bewerten -- Tool-Luecken sind hier
   keine Disqualifikation.
 
+### Erweiterung: AI-Infrastruktur zaehlt auch als AI-Security-Bezug
+
+**Stand 2026-08-20:** Ausloeser war ein Voicebot-Projekt im Gesundheitssektor
+(DevOps/Kubernetes-Betrieb fuer ein AI-System mit sensiblen Gesundheitsdaten),
+das faelschlich auf `schwach` lief, weil die Ausschreibung kein explizites
+Security-Wort enthielt -- obwohl der Betrieb eines AI-Systems mit sensiblen
+Daten ein reales Security-Thema ist, das dort nur nicht ausgeschrieben war.
+
+Das Hard-Gate oben gilt weiter, aber "erkennbarer AI-Security-Bezug" schliesst
+jetzt auch ein:
+
+- **DevOps-/Platform-Engineering-Betrieb AN einem AI/LLM-System** (Hosting,
+  CI/CD, Infrastruktur, High-Availability fuer AI-Komponenten, Voicebots,
+  Chatbots, RAG-Systeme etc.) -- auch ohne explizites Security-Wort in der
+  Anzeige. Der Betrieb eines produktiven AI-Systems bringt implizit
+  Security-relevante Fragen mit (Zugriffsschutz, Datenfluss, Modell-/
+  Prompt-Handling), und the candidate bringt mit OSCP/Bug-Bounty genau das Profil
+  mit, um das perspektivisch einzubringen.
+- Besonders starkes Signal, wenn das AI-System **sensible Daten**
+  verarbeitet (Gesundheitsdaten, personenbezogene Daten, Finanzdaten) --
+  das Security-Potenzial ist dann besonders offensichtlich, auch ohne
+  explizite Erwaehnung.
+- Reine AI-*Feature*-Entwicklung ohne Infrastruktur-/Betriebsbezug (z.B.
+  reines Prompt-Engineering oder Modelltraining ohne Platform-Anteil)
+  zaehlt NICHT automatisch -- der Match kommt ueber die DevOps-/
+  Platform-Rolle AM AI-System, nicht ueber "irgendwas mit AI".
+
+Bei einem Treffer ueber diese Erweiterung (AI-Infrastruktur statt expliziter
+Security) erreicht `fit_level` maximal `solide`, nicht `stark` -- `stark`
+bleibt Stellen mit explizitem Security-Bezug vorbehalten. Im `summary`
+explizit benennen, dass Security nicht ausgeschrieben ist, sondern aus dem
+AI-Infrastruktur-Betrieb (ggf. + sensiblen Daten) abgeleitet wurde, damit
+the candidate das beim Lesen der Notification sofort einordnen kann.
+
 ### Bei Contracting/Freelancing: Kombi mit DevOps/Platform Engineering gewuenscht
 
 AI-Security kombiniert mit DevOps oder Platform Engineering ist der

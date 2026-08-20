@@ -6,7 +6,11 @@ on:
     paths-ignore:
       - 'k8s/**'
       - 'docs/**'
-      - '**.md'
+    # Note: no blanket '**.md' ignore -- application_writer/rules/*.md are
+    # prompt content baked into the application-writer image via `COPY
+    # application_writer/ application_writer/` in Dockerfile.application-writer
+    # and read at runtime by pipeline.py, not just docs. A markdown-only
+    # rule change (e.g. candidate-profile.md) must still trigger a rebuild.
 
 env:
   REGISTRY: ghcr.io

@@ -22,12 +22,13 @@ RETRY_DELAYS_SECONDS = [1, 4, 16]
 # (subscription-billed CLI, not the direct API) with its own 180s subprocess
 # timeout per completion call -- noticeably slower and more variable than a
 # raw API call was. Set comfortably above that so the scanner doesn't give
-# up on a /assess call (one completion) that's still legitimately running
-# server-side. /compose chains up to 4 completions (analyse, write, review,
-# possible write+review retry) sequentially -- if it starts timing out once
-# compose_enabled is flipped back on, this needs to grow further or /compose
-# needs its own larger timeout, not necessarily the same one as /assess.
-REQUEST_TIMEOUT_SECONDS = 200.0
+# up on a /assess call that's still legitimately running server-side
+# (/assess is now up to two completions: analyse + blind match scoring).
+# /compose chains up to 7 completions (analyse, write, review, blind match
+# eval, plus one bounded write+review+eval improvement round) sequentially,
+# so it gets its own, much larger timeout.
+REQUEST_TIMEOUT_SECONDS = 400.0
+COMPOSE_TIMEOUT_SECONDS = 1500.0
 
 
 class ComposeError(RuntimeError):
@@ -45,13 +46,20 @@ def _posting_payload(posting: JobPosting, matched_keywords: list[str]) -> dict:
     return payload
 
 
-def _post_with_retry(url: str, payload: dict, headers: dict, error_cls: type[Exception], what: str) -> dict:
+def _post_with_retry(
+    url: str,
+    payload: dict,
+    headers: dict,
+    error_cls: type[Exception],
+    what: str,
+    timeout: float = REQUEST_TIMEOUT_SECONDS,
+) -> dict:
     last_error: Exception | None = None
     for attempt, delay in enumerate([0, *RETRY_DELAYS_SECONDS]):
         if delay:
             time.sleep(delay)
         try:
-            response = httpx.post(url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+            response = httpx.post(url, json=payload, headers=headers, timeout=timeout)
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as exc:
@@ -85,5 +93,10 @@ def trigger_compose(
     payload = _posting_payload(posting, matched_keywords)
     headers = {"Authorization": f"Bearer {token}", "X-Request-ID": request_id}
     _post_with_retry(
-        f"{base_url.rstrip('/')}/compose", payload, headers, ComposeError, f"application-writer /compose for {posting.id}"
+        f"{base_url.rstrip('/')}/compose",
+        payload,
+        headers,
+        ComposeError,
+        f"application-writer /compose for {posting.id}",
+        timeout=COMPOSE_TIMEOUT_SECONDS,
     )

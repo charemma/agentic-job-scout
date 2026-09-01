@@ -34,11 +34,13 @@ def render(request: NotesRequest) -> str:
         "matched_keywords": request.matched_keywords,
         "jobscout_status": request.status,
         "fit_level": request.fit_level,
+        "match_score": request.match.total if request.match else None,
     }
     yaml_block = yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False)
 
     gaps = "\n".join(f"- {gap}" for gap in request.gaps) or "(keine)"
     matched = ", ".join(request.matched_keywords) or "(keine)"
+    match_section = _render_match_section(request)
 
     return f"""---
 {yaml_block}---
@@ -50,7 +52,7 @@ def render(request: NotesRequest) -> str:
 ## Anschreiben
 
 {request.anschreiben}
-
+{match_section}
 ## Vorbereitung
 
 > Automatisch von jobscout vorbefuellt (Fit-Level: {request.fit_level}) -- vor dem Gespraech gegenlesen.
@@ -64,4 +66,34 @@ Gematchte Keywords: {matched}
 ### Framing was fehlt
 
 {gaps}
+"""
+
+
+def _render_match_section(request: NotesRequest) -> str:
+    """Mirrors the ## Match-Evaluation section the kuro apply flow's Themis
+    step writes, so manual and jobscout-created notes stay interchangeable."""
+    if request.match is None:
+        return ""
+    m = request.match
+    missing = ", ".join(m.missing_keywords) or "(keine)"
+    fixable = "\n".join(f"- {item}" for item in m.fixable) or "(keine)"
+    real_gaps = "\n".join(f"- {item}" for item in m.real_gaps) or "(keine)"
+    return f"""
+## Match-Evaluation
+
+### Match-Score: {m.total}%
+
+Keyword-Score: {m.keyword_score}% | Semantik-Score: {m.semantic_score}%
+
+### Fehlende Keywords
+
+{missing}
+
+### Ehrlich hebbare Punkte
+
+{fixable}
+
+### Echte Luecken
+
+{real_gaps}
 """

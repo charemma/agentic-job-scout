@@ -14,7 +14,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import yaml
 
-from application_writer.models import ComposeRequest
+from application_writer.models import ComposeRequest, MatchScore
 
 
 def _authenticated_url(clone_url: str, token: str) -> str:
@@ -42,7 +42,13 @@ def sync(clone_url: str, token: str, local_path: Path) -> Path:
     return local_path
 
 
-def _render_job_md(request: ComposeRequest, status: str, fit_level: str, target_rate: int) -> str:
+def _render_job_md(
+    request: ComposeRequest,
+    status: str,
+    fit_level: str,
+    target_rate: int,
+    match_score: MatchScore | None = None,
+) -> str:
     frontmatter = {
         "id": request.id,
         "portal": request.portal,
@@ -55,6 +61,7 @@ def _render_job_md(request: ComposeRequest, status: str, fit_level: str, target_
         "matched_keywords": request.matched_keywords,
         "status": status,
         "fit_level": fit_level,
+        "match_score": match_score.total if match_score else None,
         "created": datetime.now(timezone.utc).isoformat(),
     }
     yaml_block = yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False)
@@ -83,11 +90,14 @@ def write_and_commit(
     tailored_profil_tex: str,
     pdf_bytes: bytes,
     target_rate: int,
+    match_score: MatchScore | None = None,
 ) -> None:
     app_dir = repo_path / "applications" / request.id
     app_dir.mkdir(parents=True, exist_ok=True)
 
-    (app_dir / "job.md").write_text(_render_job_md(request, status, fit_level, target_rate), encoding="utf-8")
+    (app_dir / "job.md").write_text(
+        _render_job_md(request, status, fit_level, target_rate, match_score), encoding="utf-8"
+    )
     (app_dir / "anschreiben.md").write_text(
         _render_anschreiben_md(request, anschreiben, target_rate), encoding="utf-8"
     )

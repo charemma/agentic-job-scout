@@ -82,3 +82,44 @@ def test_notes_rejects_path_traversal_id(monkeypatch, tmp_path):
     )
 
     assert response.status_code == 400
+
+
+def test_notes_renders_match_section_when_present(monkeypatch, tmp_path):
+    monkeypatch.setattr(app_module, "VAULT_PATH", tmp_path)
+    monkeypatch.setattr(app_module, "BEWERBUNG_PROJEKT_DIR", tmp_path / "1 Projects" / "Bewerbung Projekt")
+    payload = {
+        **VALID_PAYLOAD,
+        "match": {
+            "total": 80,
+            "keyword_score": 75,
+            "semantic_score": 85,
+            "missing_keywords": ["terraform"],
+            "fixable": [],
+            "real_gaps": ["terraform"],
+        },
+    }
+
+    response = client.post(
+        "/notes", json=payload, headers={"Authorization": "Bearer test-obsidian-token"}
+    )
+
+    assert response.status_code == 200
+    note = next((tmp_path / "1 Projects" / "Bewerbung Projekt").glob("*.md"))
+    content = note.read_text()
+    assert "## Match-Evaluation" in content
+    assert "### Match-Score: 80%" in content
+    assert "Keyword-Score: 75% | Semantik-Score: 85%" in content
+    assert "match_score: 80" in content  # frontmatter
+
+
+def test_notes_omits_match_section_when_absent(monkeypatch, tmp_path):
+    monkeypatch.setattr(app_module, "VAULT_PATH", tmp_path)
+    monkeypatch.setattr(app_module, "BEWERBUNG_PROJEKT_DIR", tmp_path / "1 Projects" / "Bewerbung Projekt")
+
+    response = client.post(
+        "/notes", json=VALID_PAYLOAD, headers={"Authorization": "Bearer test-obsidian-token"}
+    )
+
+    assert response.status_code == 200
+    note = next((tmp_path / "1 Projects" / "Bewerbung Projekt").glob("*.md"))
+    assert "## Match-Evaluation" not in note.read_text()

@@ -43,6 +43,7 @@ def notify_note(
                 "matched_keywords": request.matched_keywords,
                 "gaps": composed.fit_analysis.gaps,
                 "status": status,
+                "match": composed.match_score.model_dump(exclude={"raw_text"}) if composed.match_score else None,
             },
             headers={"Authorization": f"Bearer {token}"},
             timeout=30.0,

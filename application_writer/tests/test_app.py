@@ -18,7 +18,7 @@ for key, value in {
 from fastapi.testclient import TestClient  # noqa: E402
 
 from application_writer import app as app_module  # noqa: E402
-from application_writer.models import FitAnalysis, ReviewResult  # noqa: E402
+from application_writer.models import FitAnalysis, MatchScore, ReviewResult  # noqa: E402
 from application_writer.pipeline import ComposedApplication  # noqa: E402
 
 client = TestClient(app_module.app)
@@ -45,6 +45,10 @@ def _patch_pipeline(monkeypatch, needs_review: bool):
         tailored_profil_tex="\\section*{Profil}",
         review=review,
         needs_review=needs_review,
+        match_score=MatchScore(
+            total=80, keyword_score=75, semantic_score=85,
+            missing_keywords=[], fixable=[], real_gaps=[], raw_text="...",
+        ),
     )
     monkeypatch.setattr(app_module.pipeline, "compose", lambda *a, **k: composed)
 

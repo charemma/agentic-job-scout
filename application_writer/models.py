@@ -27,6 +27,18 @@ class FitAnalysis(BaseModel):
     raw_text: str
 
 
+class MatchScore(BaseModel):
+    """Blind screening simulation result -- see rules/match-eval.md."""
+
+    total: int  # weighted percent, rounded to 5s
+    keyword_score: int
+    semantic_score: int
+    missing_keywords: list[str]
+    fixable: list[str]  # honestly backed rewording opportunities
+    real_gaps: list[str]  # requirements no wording can fix
+    raw_text: str
+
+
 class ReviewResult(BaseModel):
     verdict: str  # "APPROVE" | "REQUEST CHANGES" | "MAPPING SCHWACH"
     findings: str

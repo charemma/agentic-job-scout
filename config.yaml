@@ -40,6 +40,11 @@ criteria:
   # what drives the assessment itself (contract type, remote-only, AI-
   # Security direction).
   min_fit_level: solide
+  # Optional second gate on the blind match score from /assess (percent,
+  # scored against the master CV -- see application_writer/rules/match-eval.md).
+  # Unset = notify on fit_level alone; the score still rides along in the
+  # ntfy push for prioritization. Fail-open when scoring itself failed.
+  # min_match_score: 60
   # Enforced hard in candidate-profile.md for permanent/Festanstellung
   # postings (contracting stays as before). Also used where a portal search
   # itself supports a remote filter (see driver configs below).

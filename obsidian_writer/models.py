@@ -3,6 +3,15 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
+class MatchInfo(BaseModel):
+    total: int
+    keyword_score: int
+    semantic_score: int
+    missing_keywords: list[str] = []
+    fixable: list[str] = []
+    real_gaps: list[str] = []
+
+
 class NotesRequest(BaseModel):
     id: str
     title: str
@@ -20,3 +29,4 @@ class NotesRequest(BaseModel):
     matched_keywords: list[str] = []
     gaps: list[str] = []
     status: str
+    match: MatchInfo | None = None

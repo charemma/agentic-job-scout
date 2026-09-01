@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from application_writer import claude_cli
-from application_writer.models import ComposeRequest, FitAnalysis, ReviewResult
+from application_writer.models import ComposeRequest, FitAnalysis, MatchScore, ReviewResult
 
 RULES_DIR = Path(__file__).parent / "rules"
 TARGET_RATE_EUR_PER_HOUR = 100
@@ -41,6 +41,7 @@ class ComposedApplication:
     tailored_profil_tex: str
     review: ReviewResult
     needs_review: bool
+    match_score: MatchScore | None
 
 
 ANALYSIS_INSTRUCTIONS = """
@@ -84,6 +85,25 @@ REVIEW_INSTRUCTIONS = """
 Du bist die Reviewerin. Pruefe Anschreiben und profil.tex gegen die
 Review-Essentials-Regeln oben. Antworte GENAU im dort vorgegebenen Format
 (### Verdict / ### Funde / ### Writer-Instruction).
+"""
+
+
+MATCH_EVAL_INSTRUCTIONS = """
+## Aufgabe
+
+Du bist die Match-Evaluatorin (Blind-Screening, siehe Regel oben). Bewerte
+die Bewerbungsunterlagen gegen die Stellenausschreibung nach der
+Score-Methodik. Liefere zuerst deine Analyse als Freitext, dann am Ende
+GENAU einen Block in dieser Form (sonst nichts danach):
+
+```json
+{"total": 75, "keyword_score": 70, "semantic_score": 80,
+ "missing_keywords": ["..."], "fixable": ["..."], "real_gaps": ["..."]}
+```
+
+Alle Scores sind Ganzzahlen 0-100. "fixable" sind ehrlich belegbare
+Umformulierungen (leer wenn keine), "real_gaps" sind Anforderungen ohne
+Beleg im CV.
 """
 
 
@@ -188,16 +208,55 @@ def _parse_review(raw: str) -> ReviewResult:
     return ReviewResult(verdict=verdict, findings=findings, writer_instruction=writer_instruction)
 
 
+def evaluate(
+    request: ComposeRequest,
+    profil_tex: str,
+    common: dict[str, str],
+    anschreiben: str | None = None,
+) -> MatchScore:
+    """Blind screening simulation. Deliberately NOT given the fit analysis,
+    matched keywords, or any writing context -- the evaluator must see
+    exactly what a screening system sees, nothing more."""
+    system = load_rule("match-eval") + "\n\n" + MATCH_EVAL_INSTRUCTIONS
+    user = (
+        "## Stellenausschreibung\n"
+        f"Titel: {request.title}\n"
+        f"Contract: {request.contract_type}, Remote: {request.remote_percent}%\n\n"
+        f"{request.posting_text}"
+        f"\n\n## CV: profil.tex\n{profil_tex}"
+        f"\n\n## CV: common/experience.tex\n{common.get('experience', '')}"
+    )
+    if anschreiben:
+        user += f"\n\n## Anschreiben\n{anschreiben}"
+    raw = claude_cli.complete(system, user)
+    data = _extract_json_block(raw)
+    return MatchScore(raw_text=raw, **data)
+
+
 def compose(request: ComposeRequest, profil_tex: str, common: dict[str, str]) -> ComposedApplication:
     fit = analyse(request, profil_tex, common)
     anschreiben, tailored_profil_tex = write(request, profil_tex, common, fit)
     result = review(anschreiben, tailored_profil_tex, profil_tex, common)
 
+    review_retried = False
     if result.verdict == "REQUEST CHANGES" and result.writer_instruction:
+        review_retried = True
         anschreiben, tailored_profil_tex = write(
             request, profil_tex, common, fit, retry_instruction=result.writer_instruction
         )
         result = review(anschreiben, tailored_profil_tex, profil_tex, common)
+
+    # Blind screening score of the tailored result. If the evaluator found
+    # honestly fixable wording and the single bounded retry wasn't already
+    # spent on review findings, spend it here and re-review + re-score.
+    score = evaluate(request, tailored_profil_tex, common, anschreiben=anschreiben)
+    if score.fixable and not review_retried:
+        instruction = "Match-Evaluation (Blind-Screening) fand ehrlich hebbare Punkte:\n" + "\n".join(
+            f"- {item}" for item in score.fixable
+        )
+        anschreiben, tailored_profil_tex = write(request, profil_tex, common, fit, retry_instruction=instruction)
+        result = review(anschreiben, tailored_profil_tex, profil_tex, common)
+        score = evaluate(request, tailored_profil_tex, common, anschreiben=anschreiben)
 
     return ComposedApplication(
         fit_analysis=fit,
@@ -205,4 +264,5 @@ def compose(request: ComposeRequest, profil_tex: str, common: dict[str, str]) ->
         tailored_profil_tex=tailored_profil_tex,
         review=result,
         needs_review=result.verdict != "APPROVE",
+        match_score=score,
     )

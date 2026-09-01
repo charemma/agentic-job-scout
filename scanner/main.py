@@ -185,6 +185,19 @@ def _process_matched_posting(
         log.info("[%s] fit_level=%s below threshold, skipping", request_id, fit_level)
         return outcome
 
+    # Optional second gate on the blind match score (measurement point 1,
+    # against the master CV). Off unless min_match_score is configured; a
+    # posting without a score (scoring failed server-side) always passes --
+    # fail open, the fit_level gate already did the real filtering.
+    match_score = assessment.get("match_score")
+    min_match_score = config["criteria"].get("min_match_score")
+    if min_match_score is not None and match_score and match_score["total"] < min_match_score:
+        log.info(
+            "[%s] match_score=%d%% below min_match_score=%d, skipping",
+            request_id, match_score["total"], min_match_score,
+        )
+        return outcome
+
     log.info(
         "[%s] fit_level=%s -- notifying%s",
         request_id,
@@ -232,20 +245,41 @@ def _notify_match_found(
     config: dict, secrets: Secrets, posting, matched_keywords: list[str], assessment: dict, compose_enabled: bool
 ) -> None:
     ntfy = config["notifications"]["ntfy"]
-    footer = "Draft wird erstellt..." if compose_enabled else "Kein Draft (compose_enabled=false)."
+    title, message = _match_notification(posting, matched_keywords, assessment, compose_enabled)
     notify(
         base_url=ntfy["base_url"],
         topic=ntfy["topic"],
         token=secrets.ntfy_token,
-        title=f"[{assessment.get('fit_level', '?')}] {posting.title}",
-        message=(
-            f"{posting.company or 'Unbekannt'} -- {posting.portal}\n"
-            f"Keywords: {', '.join(matched_keywords)}\n\n"
-            f"{assessment.get('summary', '')}\n\n"
-            f"{footer}"
-        ),
+        title=title,
+        message=message,
         click_url=posting.url,
     )
+
+
+def _match_notification(
+    posting, matched_keywords: list[str], assessment: dict, compose_enabled: bool
+) -> tuple[str, str]:
+    """Pure builder for the match-found push -- title carries fit level and
+    blind match score so postings can be prioritized from the phone."""
+    fit_level = assessment.get("fit_level", "?")
+    match_score = assessment.get("match_score")
+    title_tag = f"[{fit_level} {match_score['total']}%]" if match_score else f"[{fit_level}]"
+    match_line = (
+        f"Match: {match_score['total']}% "
+        f"(Keywords {match_score['keyword_score']}% / Semantik {match_score['semantic_score']}%)\n"
+        if match_score
+        else ""
+    )
+    footer = "Draft wird erstellt..." if compose_enabled else "Kein Draft (compose_enabled=false)."
+    title = f"{title_tag} {posting.title}"
+    message = (
+        f"{posting.company or 'Unbekannt'} -- {posting.portal}\n"
+        f"Keywords: {', '.join(matched_keywords)}\n"
+        f"{match_line}\n"
+        f"{assessment.get('summary', '')}\n\n"
+        f"{footer}"
+    )
+    return title, message
 
 
 if __name__ == "__main__":

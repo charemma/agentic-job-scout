@@ -74,8 +74,23 @@ def assess(
         log.error("[%s] assess failed: %s", request_id, exc)
         raise HTTPException(status_code=502, detail=f"LLM assessment failed: {exc}") from exc
 
-    log.info("[%s] fit_level=%s", request_id, fit.fit_level)
-    return {"fit_level": fit.fit_level, "summary": fit.summary}
+    match_score = None
+    if fit.fit_level != "schwach":
+        # Blind score against the master CV (measurement point 1) -- skipped
+        # for schwach postings, which the AI-Security hard-gate keeps from
+        # ever being notified anyway. Best-effort: a scoring failure must
+        # not turn a successful assessment into a 502.
+        try:
+            score = pipeline.evaluate(request, profil_tex, common)
+            match_score = score.model_dump(exclude={"raw_text"})
+        except pipeline.PipelineError as exc:
+            log.warning("[%s] match scoring failed (non-fatal): %s", request_id, exc)
+
+    log.info(
+        "[%s] fit_level=%s match=%s", request_id, fit.fit_level,
+        f"{match_score['total']}%" if match_score else "n/a",
+    )
+    return {"fit_level": fit.fit_level, "summary": fit.summary, "match_score": match_score}
 
 
 @app.post("/compose")
@@ -112,6 +127,7 @@ def compose(
         tailored_profil_tex=composed.tailored_profil_tex,
         pdf_bytes=pdf_bytes,
         target_rate=TARGET_RATE_EUR_PER_HOUR,
+        match_score=composed.match_score,
     )
 
     obsidian_client.notify_note(
@@ -123,19 +139,32 @@ def compose(
         rate=TARGET_RATE_EUR_PER_HOUR,
     )
 
-    _notify_draft_ready(request, status)
+    _notify_draft_ready(request, status, composed.match_score)
 
-    log.info("[%s] done: status=%s fit_level=%s", request_id, status, composed.fit_analysis.fit_level)
-    return {"id": request.id, "status": status, "fit_level": composed.fit_analysis.fit_level}
+    log.info(
+        "[%s] done: status=%s fit_level=%s match=%s",
+        request_id, status, composed.fit_analysis.fit_level,
+        f"{composed.match_score.total}%" if composed.match_score else "n/a",
+    )
+    return {
+        "id": request.id,
+        "status": status,
+        "fit_level": composed.fit_analysis.fit_level,
+        "match_score": composed.match_score.model_dump(exclude={"raw_text"}) if composed.match_score else None,
+    }
 
 
-def _notify_draft_ready(request: ComposeRequest, status: str) -> None:
+def _notify_draft_ready(request: ComposeRequest, status: str, match_score) -> None:
     title = "Draft braucht Review" if status == "needs-review" else "Draft fertig"
+    match_line = f"\nMatch: {match_score.total}%" if match_score else ""
     notifier.notify(
         base_url=NTFY_BASE_URL,
         topic=NTFY_TOPIC,
         token=NTFY_TOKEN,
         title=f"{title}: {request.title}",
-        message=f"{request.company or 'Unbekannt'} -- Anschreiben + CV liegen in jobscout-applications/{request.id}",
+        message=(
+            f"{request.company or 'Unbekannt'} -- Anschreiben + CV liegen in "
+            f"jobscout-applications/{request.id}{match_line}"
+        ),
         click_url=request.url,
     )

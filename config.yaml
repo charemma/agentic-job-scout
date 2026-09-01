@@ -49,12 +49,13 @@ criteria:
   # postings (contracting stays as before). Also used where a portal search
   # itself supports a remote filter (see driver configs below).
   remote_only: true
-  # Round-1 mode (2026-08-13): the candidate wants matching working first, drafts
-  # later. When false, a passing fit_level still gets notified via ntfy but
-  # never triggers /compose -- no CV tailoring, no LaTeX build, no
-  # jobscout-applications commit, no Obsidian note. Flip to true once ready
-  # to actually draft applications.
-  compose_enabled: false
+  # Enabled 2026-09-01 after the full E2E test run (freelancermap-3041826):
+  # a passing fit_level now triggers /compose -- tailored CV + Anschreiben +
+  # blind match eval, committed to jobscout-applications, Obsidian note via
+  # obsidian-writer, ntfy push. Drafts land as composed/needs-review and are
+  # never auto-submitted. (Round-1 notify-only mode ran 2026-08-13 to
+  # 2026-09-01.)
+  compose_enabled: true
 
 # All portals log in (driver: playwright, uniformly) -- decided 2026-08-14.
 # Anonymous access was only ever verified to return *a* result set, never

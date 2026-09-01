@@ -20,6 +20,13 @@ spec:
     spec:
       nodeSelector:
         vault-access: "true"
+      # home-node carries dedicated=home:NoSchedule (see infra-config
+      # hosts/home-node) -- same toleration as the scanner CronJob.
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: home
+          effect: NoSchedule
       imagePullSecrets:
         - name: ghcr-pull-secret
       securityContext:

@@ -1,7 +1,7 @@
 """Analysis -> write -> self-review pipeline (Athena/Kalliope/Bella
-equivalents from cv/.kuro), run unattended via direct Anthropic API calls
-instead of kuro's CLI-shellout backends (claude-cli/codex), which aren't
-usable non-interactively in a container.
+equivalents from cv/.kuro), run unattended via headless `claude -p`
+(subscription billing, see claude_cli.py) -- the same CLI-shellout pattern
+kuro uses in production, just driven from Python instead of flow YAML.
 
 Bounded: one review round, at most one writer retry on REQUEST CHANGES. No
 human-in-the-loop here -- that happens downstream. A still-REQUEST-CHANGES
@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from application_writer import anthropic_client
+from application_writer import claude_cli
 from application_writer.models import ComposeRequest, FitAnalysis, ReviewResult
 
 RULES_DIR = Path(__file__).parent / "rules"
@@ -120,7 +120,7 @@ def analyse(request: ComposeRequest, profil_tex: str, common: dict[str, str]) ->
         + f"\n\n## Aktuelles profil.tex\n{profil_tex}"
         + f"\n\n## common/experience.tex\n{common.get('experience', '')}"
     )
-    raw = anthropic_client.complete(system, user)
+    raw = claude_cli.complete(system, user)
     data = _extract_json_block(raw)
     return FitAnalysis(raw_text=raw, **data)
 
@@ -151,7 +151,7 @@ def write(
     if retry_instruction:
         user += f"\n\n## Ueberarbeitung noetig (Reviewer-Feedback)\n{retry_instruction}"
 
-    raw = anthropic_client.complete(system, user)
+    raw = claude_cli.complete(system, user)
     anschreiben = _extract_section(raw, "anschreiben")
     tailored_profil_tex = _extract_section(raw, "profil_tex")
     return anschreiben, tailored_profil_tex
@@ -167,7 +167,7 @@ def review(anschreiben: str, tailored_profil_tex: str, profil_tex: str, common: 
         f"## Original profil.tex (Beleg-Quelle)\n{profil_tex}\n\n"
         f"## common/experience.tex (Beleg-Quelle)\n{common.get('experience', '')}"
     )
-    raw = anthropic_client.complete(system, user)
+    raw = claude_cli.complete(system, user)
     return _parse_review(raw)
 
 

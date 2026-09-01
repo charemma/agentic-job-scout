@@ -144,7 +144,7 @@ re-apply.
 
 ## 3. jobscout-application-writer secrets
 
-**No `ANTHROPIC_API_KEY` here, deliberately.** `application_writer/anthropic_client.py`
+**No `ANTHROPIC_API_KEY` here, deliberately.** `application_writer/claude_cli.py`
 shells out to `claude -p` (Claude Code CLI), authenticated via
 `CLAUDE_CODE_OAUTH_TOKEN` instead -- billed against the Claude Code
 subscription, not metered API pricing (see that module's docstring for the

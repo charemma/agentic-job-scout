@@ -45,7 +45,7 @@ services:
       NTFY_TOKEN: ${NTFY_TOKEN:?set a real token, or point NTFY_BASE_URL at a throwaway local ntfy container}
     volumes:
       - ../jobscout-applications:/applications-repo-source:ro
-      # anthropic_client.py shells out to `claude -p`, authenticated via this
+      # claude_cli.py shells out to `claude -p`, authenticated via this
       # mounted OAuth session (subscription billing, not metered API -- see
       # that module's docstring). Same file as on the host, no separate
       # `claude login` needed for local dev.

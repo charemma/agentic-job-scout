@@ -25,7 +25,7 @@ spec:
           envFrom:
             - secretRef:
                 name: jobscout-application-writer-secrets
-          # anthropic_client.py shells out to `claude -p`, authenticated via
+          # claude_cli.py shells out to `claude -p`, authenticated via
           # CLAUDE_CODE_OAUTH_TOKEN below -- NOT an ANTHROPIC_API_KEY (that
           # env var must stay unset here, its presence would override the
           # subscription-billed OAuth path). This token comes from
@@ -33,7 +33,7 @@ spec:
           # same image (so it's a fully independent session, not a copy of
           # anyone's local `claude login` session -- avoids the refresh-token
           # collision that a shared/copied credentials.json had). Valid 1
-          # year. See k8s/secrets.md and anthropic_client.py's docstring for
+          # year. See k8s/secrets.md and claude_cli.py's docstring for
           # the full rationale.
           env:
             - name: CLAUDE_CODE_OAUTH_TOKEN

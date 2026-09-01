@@ -97,7 +97,7 @@ def test_parse_review_raises_without_verdict():
 
 def test_compose_approves_on_first_pass(monkeypatch):
     calls = iter([ANALYSIS_OUTPUT, WRITER_OUTPUT, REVIEW_APPROVE])
-    monkeypatch.setattr(pipeline.anthropic_client, "complete", lambda system, user: next(calls))
+    monkeypatch.setattr(pipeline.claude_cli, "complete", lambda system, user: next(calls))
 
     result = pipeline.compose(_request(), profil_tex="\\section*{Profil}\nOld.", common={"experience": "..."})
 
@@ -110,7 +110,7 @@ def test_compose_retries_once_on_request_changes(monkeypatch):
     calls = iter(
         [ANALYSIS_OUTPUT, WRITER_OUTPUT, REVIEW_REQUEST_CHANGES, WRITER_OUTPUT, REVIEW_APPROVE]
     )
-    monkeypatch.setattr(pipeline.anthropic_client, "complete", lambda system, user: next(calls))
+    monkeypatch.setattr(pipeline.claude_cli, "complete", lambda system, user: next(calls))
 
     result = pipeline.compose(_request(), profil_tex="\\section*{Profil}\nOld.", common={"experience": "..."})
 
@@ -121,7 +121,7 @@ def test_compose_flags_needs_review_if_still_not_approved_after_retry(monkeypatc
     calls = iter(
         [ANALYSIS_OUTPUT, WRITER_OUTPUT, REVIEW_REQUEST_CHANGES, WRITER_OUTPUT, REVIEW_REQUEST_CHANGES]
     )
-    monkeypatch.setattr(pipeline.anthropic_client, "complete", lambda system, user: next(calls))
+    monkeypatch.setattr(pipeline.claude_cli, "complete", lambda system, user: next(calls))
 
     result = pipeline.compose(_request(), profil_tex="\\section*{Profil}\nOld.", common={"experience": "..."})
 

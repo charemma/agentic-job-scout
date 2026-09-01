@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # git for applications_repo/cv_client checkouts; nodejs+npm to install the
-# Claude Code CLI (`claude -p`), which anthropic_client.py shells out to --
+# Claude Code CLI (`claude -p`), which claude_cli.py shells out to --
 # see that module's docstring for why (subscription billing, not metered
 # API) and k8s/secrets.md for how the login session gets into this
 # container (mounted credentials file, not ANTHROPIC_API_KEY).

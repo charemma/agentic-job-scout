@@ -18,7 +18,7 @@ import httpx
 from scanner.models import JobPosting
 
 RETRY_DELAYS_SECONDS = [1, 4, 16]
-# application-writer's anthropic_client.py now shells out to `claude -p`
+# application-writer's claude_cli.py shells out to `claude -p`
 # (subscription-billed CLI, not the direct API) with its own 180s subprocess
 # timeout per completion call -- noticeably slower and more variable than a
 # raw API call was. Set comfortably above that so the scanner doesn't give

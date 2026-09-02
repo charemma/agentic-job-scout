@@ -48,6 +48,12 @@ Diese Datei lebt im cv repo (`.kuro/rules/`), damit sie auch ohne den `agent/` S
 - MCP, Agent-Workflows
 - Eigenes OSS-Projekt: kuromaku (Rust CLI fuer reproduzierbare AI-Agenten-Teams)
 - AI-Tooling Beratung bei Client A (Claude Code + Copilot in DevContainer-Workflows)
+- Eigenes Agenten-Framework fuer seine Mobile-First-App-Entwicklung (praktischer
+  Agent-Einsatz im eigenen Produktivprozess, aktuell nicht oeffentlich)
+- jobscout selbst: die hier laufende Pipeline (Scanner -> LLM-Assessment ->
+  LLM-Compose -> Obsidian/ntfy-Anbindung) ist ein selbst gebautes, produktiv
+  laufendes Multi-Agent-/LLM-System -- direkter Beleg fuer LLM-/Agent-
+  Engineering, nicht nur -Nutzung
 
 ## Open Source / Eigene Projekte
 
@@ -144,6 +150,44 @@ bleibt Stellen mit explizitem Security-Bezug vorbehalten. Im `summary`
 explizit benennen, dass Security nicht ausgeschrieben ist, sondern aus dem
 AI-Infrastruktur-Betrieb (ggf. + sensiblen Daten) abgeleitet wurde, damit
 the candidate das beim Lesen der Notification sofort einordnen kann.
+
+### Erweiterung 2: Reines AI-Engineering zaehlt, wenn ueber eigene Referenzprojekte geframed
+
+**Stand 2026-09-02:** Ausgeloest durch eine "Senior AI Engineer" Rolle
+(LLM-/Agent-/MCP-Integration, agentische AI-Plattform, chemische Industrie)
+beim selben Kunden wie ein bereits gematchtes DevOps-Posting -- bisher als
+`schwach` verworfen ("reines Feature-/Integrations-Engineering ohne
+Platform- oder Security-Bezug"), obwohl the candidate fuer genau sowas echte, wenn
+auch eigene, Referenzpunkte hat.
+
+Zusaetzlich zu den beiden Erweiterungen oben zaehlt jetzt auch: **reine
+AI-Engineering-/LLM-Integrationsrollen** (LLM anbinden, Agent-Workflows
+bauen, MCP-Integration, Agentic-AI-Features) -- auch OHNE Platform-Ops- oder
+Security-Anteil in der Stelle selbst -- WENN the candidate sich darueber gut framen
+kann ueber konkrete eigene Referenzprojekte:
+
+- **Client A**: Claude Code Rules/Setup fuer das Entwicklerteam bereitgestellt
+  (AI-Tooling-Rollout in einer Produktivumgebung, kein Hobby-Setup)
+- **Eigenes Agenten-Framework** fuer seine Mobile-First-App-Entwicklung
+  (praktischer Agent-Einsatz im eigenen Produktivprozess)
+- **jobscout selbst**: die hier laufende Pipeline (Scanner -> LLM-Assessment
+  -> LLM-Compose -> Obsidian/ntfy-Anbindung) ist ein selbst gebautes,
+  produktiv laufendes Multi-Agent-/LLM-System -- direkter Beleg fuer
+  LLM-/Agent-Engineering, nicht nur -Nutzung
+
+Im `summary` explizit mitgeben:
+
+- Diese Referenzprojekte sind **eigene/private Projekte, aktuell nicht
+  oeffentlich/open source** -- kein Portfolio-Link vorzeigbar. Falls die
+  Stelle einen oeffentlichen Track Record verlangt, das als offene
+  Frage/Luecke benennen, nicht verschweigen.
+- Match ueber diese Erweiterung ist schwaecher belegt als ueber bezahlte
+  Kundenarbeit -- `fit_level` erreicht maximal `solide`, nie `stark`, auch
+  wenn der inhaltliche Fit sonst gut aussieht.
+- Reine ML-Research-/Data-Science-Rollen (Modelltraining, keine
+  Integrations-/Engineering-Arbeit) zaehlen weiterhin NICHT -- siehe "Was er
+  NICHT macht" unten. Diese Erweiterung gilt nur fuer AI-*Engineering*
+  (LLMs/Agents in Software integrieren), nicht fuer ML-Forschung.
 
 ### Bei Contracting/Freelancing: Kombi mit DevOps/Platform Engineering gewuenscht
 

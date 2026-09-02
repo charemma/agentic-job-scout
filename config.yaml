@@ -32,6 +32,21 @@ criteria:
     - mlsecops
     - ai governance
     - genai security
+    # 2026-09-02: pure AI-engineering/LLM-integration terms, added after a
+    # real miss -- a "Senior AI Engineer" posting (LLM/Agent/MCP
+    # integration, agentic AI platform) never matched because the keyword
+    # list only had security-flavored AI terms, not generic AI-engineering
+    # ones. These are intentionally broad/noisy at the keyword-prefilter
+    # stage -- candidate-profile.md's Erweiterung 2 is the actual fit gate
+    # downstream (LLM /assess), this list just decides what's worth an
+    # /assess call at all.
+    - llm
+    - agentic ai
+    - ai agent
+    - mcp
+    - model context protocol
+    - generative ai
+    - genai
   min_matches: 1
   target_rate_eur_per_hour: 100
   # LLM-assessed fit_level (from application-writer's /assess) required to

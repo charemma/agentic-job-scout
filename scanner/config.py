@@ -46,10 +46,23 @@ class Secrets:
         named `<portal>.json` under `JOBSCOUT_SESSION_DIR` (mounted from a
         per-portal k8s Secret, see k8s/secrets.md). Returns None if no such
         file exists -- a fetcher without a bootstrapped session just falls
-        back to a fresh login, same as before this existed."""
+        back to a fresh login, same as before this existed.
+
+        Deliberately `is_file()`, not `exists()`: the k8s manifest mounts
+        each session Secret via `subPath` with `optional: true` so the
+        CronJob still runs before a session is ever bootstrapped -- but
+        when the referenced Secret doesn't exist yet, kubelet still
+        creates the subPath mount point as an empty directory instead of
+        leaving it absent. `exists()` returns True for that empty
+        directory, which then gets handed to Playwright's
+        `storage_state=` as if it were a real session file (crashes with
+        `IsADirectoryError`) instead of falling back to a fresh login as
+        intended. Confirmed live 2026-09-02: `jobscout-xing-session` was
+        never bootstrapped, and `/etc/jobscout-sessions/xing.json` was an
+        empty directory in the running pod, not a missing path."""
         session_dir = Path(os.environ.get("JOBSCOUT_SESSION_DIR", "/etc/jobscout-sessions"))
         path = session_dir / f"{portal_name}.json"
-        return path if path.exists() else None
+        return path if path.is_file() else None
 
 
 def _require_env(name: str) -> str:

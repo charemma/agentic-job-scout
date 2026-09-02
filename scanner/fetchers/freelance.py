@@ -13,9 +13,18 @@ best-effort guess (same style as solcom.py's), not confirmed against a
 real logged-in page. Needs a live selector-verification pass (open the
 search URL in a real authenticated browser session, `page.content()` it,
 adjust selectors) before trusting its output.
+
+**Login field fixed, 2026-09-02**: `_login()` was guessing a standalone
+"E-Mail" label, which timed out on every run -- the real login form has a
+single combined field labeled "Nutzername/E-Mail", not two separate ones.
+Matched via a case-insensitive regex on "e-mail" rather than the exact
+combined string, so a future label rewording is less likely to break it
+again the same way.
 """
 
 from __future__ import annotations
+
+import re
 
 from scanner.fetchers import base
 from scanner.models import JobPosting
@@ -55,7 +64,7 @@ def fetch(ctx: base.FetchContext, config: dict) -> list[JobPosting]:
 def _login(page, username: str, password: str) -> None:
     base.goto(page, f"{BASE_URL}/login.php")
     base.dismiss_cookie_banner(page)
-    page.get_by_label("E-Mail").fill(username)
+    page.get_by_label(re.compile("e-mail", re.IGNORECASE)).fill(username)
     page.get_by_label("Passwort").fill(password)
     page.get_by_role("button", name="Anmelden").click()
     page.wait_for_load_state("networkidle")

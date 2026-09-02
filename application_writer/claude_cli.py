@@ -33,10 +33,16 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 
 DEFAULT_MODEL = os.environ.get("CLAUDE_CLI_MODEL", "sonnet")
 MAX_BUDGET_USD = os.environ.get("CLAUDE_CLI_MAX_BUDGET_USD", "0.50")
 TIMEOUT_SECONDS = 180.0
+# One retry: a lone `claude -p` hiccup (transient CLI/subprocess failure,
+# not a deterministic model refusal) shouldn't abort a /compose chain of up
+# to 7 sequential completions. Short, fixed delay -- this is a subprocess
+# shellout, not a rate-limited HTTP API, so no need for real backoff.
+RETRY_DELAY_SECONDS = 5.0
 
 
 class AnthropicCLIError(RuntimeError):
@@ -50,6 +56,18 @@ class AnthropicCLIError(RuntimeError):
 
 
 def complete(system: str, user: str, model: str = DEFAULT_MODEL, max_tokens: int = 4096) -> str:
+    last_error: Exception | None = None
+    for attempt in range(2):
+        if attempt:
+            time.sleep(RETRY_DELAY_SECONDS)
+        try:
+            return _complete_once(system, user, model)
+        except (subprocess.TimeoutExpired, AnthropicCLIError) as exc:
+            last_error = exc
+    raise AnthropicCLIError(f"claude -p failed twice, giving up: {last_error}") from last_error
+
+
+def _complete_once(system: str, user: str, model: str) -> str:
     result = subprocess.run(
         [
             "claude",

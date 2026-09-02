@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -20,7 +22,7 @@ class ComposeRequest(BaseModel):
 
 
 class FitAnalysis(BaseModel):
-    fit_level: str  # "stark" | "solide" | "schwach"
+    fit_level: Literal["stark", "solide", "schwach"]
     matched: list[str]
     gaps: list[str]
     summary: str
@@ -40,6 +42,6 @@ class MatchScore(BaseModel):
 
 
 class ReviewResult(BaseModel):
-    verdict: str  # "APPROVE" | "REQUEST CHANGES" | "MAPPING SCHWACH"
+    verdict: Literal["APPROVE", "REQUEST CHANGES", "MAPPING SCHWACH"]
     findings: str
     writer_instruction: str | None = None

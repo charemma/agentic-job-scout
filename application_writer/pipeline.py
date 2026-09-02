@@ -18,6 +18,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from application_writer import claude_cli
 from application_writer.models import ComposeRequest, FitAnalysis, MatchScore, ReviewResult
 
@@ -111,7 +113,10 @@ def _extract_json_block(text: str) -> dict:
     match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
     if not match:
         raise PipelineError("no ```json block found in analysis output")
-    return json.loads(match.group(1))
+    try:
+        return json.loads(match.group(1))
+    except json.JSONDecodeError as exc:
+        raise PipelineError(f"unparseable json block in analysis output: {exc}") from exc
 
 
 def _extract_section(text: str, tag: str) -> str:
@@ -142,7 +147,10 @@ def analyse(request: ComposeRequest, profil_tex: str, common: dict[str, str]) ->
     )
     raw = claude_cli.complete(system, user)
     data = _extract_json_block(raw)
-    return FitAnalysis(raw_text=raw, **data)
+    try:
+        return FitAnalysis(raw_text=raw, **data)
+    except (ValidationError, TypeError) as exc:
+        raise PipelineError(f"analysis json block didn't match FitAnalysis: {exc}") from exc
 
 
 def write(
@@ -230,7 +238,10 @@ def evaluate(
         user += f"\n\n## Anschreiben\n{anschreiben}"
     raw = claude_cli.complete(system, user)
     data = _extract_json_block(raw)
-    return MatchScore(raw_text=raw, **data)
+    try:
+        return MatchScore(raw_text=raw, **data)
+    except (ValidationError, TypeError) as exc:
+        raise PipelineError(f"match-eval json block didn't match MatchScore: {exc}") from exc
 
 
 def compose(request: ComposeRequest, profil_tex: str, common: dict[str, str]) -> ComposedApplication:

@@ -62,6 +62,12 @@ def _post_with_retry(
             response = httpx.post(url, json=payload, headers=headers, timeout=timeout)
             response.raise_for_status()
             return response.json()
+        except httpx.HTTPStatusError as exc:
+            # A 4xx (bad token, bad payload) will never succeed on retry --
+            # fail fast instead of burning ~21s of backoff on it.
+            if 400 <= exc.response.status_code < 500:
+                raise error_cls(f"{what} failed with {exc.response.status_code}, not retrying: {exc}") from exc
+            last_error = exc
         except httpx.HTTPError as exc:
             last_error = exc
 

@@ -107,7 +107,7 @@ def compose(
     profil_tex, common = cv_client.fetch_profile(CV_SERVICE_BASE_URL, CV_SERVICE_TOKEN)
 
     try:
-        composed = pipeline.compose(request, profil_tex, common)
+        composed = pipeline.compose(request, profil_tex, common, target_rate=TARGET_RATE_EUR_PER_HOUR)
     except pipeline.PipelineError as exc:
         log.error("[%s] pipeline failed, not committing: %s", request_id, exc)
         raise HTTPException(status_code=502, detail=f"LLM pipeline failed: {exc}") from exc

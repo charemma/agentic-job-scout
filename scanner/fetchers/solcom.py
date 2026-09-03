@@ -1,12 +1,11 @@
 """solcom.de fetcher.
 
-solcom.de's Projektbörse sits behind Cloudflare bot-protection -- a plain
+solcom.de's Projektbörse sits behind a Cloudflare JS challenge -- a plain
 `httpx` GET returns HTTP 403 with a Cloudflare interstitial ("Kundeninformation"
 title page), verified 2026-08-12. A real browser (Playwright) is required
-here not because of a login wall on the search itself, but to get past that
-challenge -- Cloudflare's JS challenge generally passes for a real Chromium
-session, especially from a residential IP (this fetcher only makes sense
-running from `home-node`, same rationale as xing/linkedin).
+here, not because of a login wall on the search itself, but because a
+real Chromium session clears the JS challenge where a plain HTTP client
+doesn't (this fetcher runs from a home-network node, same as xing/linkedin).
 
 Result-card and login selectors verified live 2026-08-18 (a real browser
 sails straight through the Cloudflare challenge, no interstitial hit):

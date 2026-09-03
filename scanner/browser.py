@@ -8,10 +8,9 @@ and the `playwright` import itself is deferred into the function body so
 `scanner.main` stays importable on a host where Playwright's native deps
 aren't installed (e.g. local dev without the Docker image's apt-installed
 Chromium libs), as long as nothing enabled actually needs it. Launched
-headless; the scanner CronJob itself is what gives these portals a real
-(home, non-datacenter) IP by running pinned to `home-node`, see
-k8s/scanner-cronjob.yaml -- this module is only responsible for the browser
-process, not the network path.
+headless; the scanner CronJob itself runs pinned to a home-network node
+(see k8s/scanner-cronjob.yaml) -- this module is only responsible for the
+browser process, not the network path.
 """
 
 from __future__ import annotations

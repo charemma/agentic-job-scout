@@ -41,8 +41,8 @@ class Secrets:
         """Path to a Playwright `storage_state` JSON file for a portal, if
         one was bootstrapped -- see scripts/linkedin_login_bootstrap.py and
         fetchers/linkedin.py's docstring for why this exists (persisted
-        login session avoids re-triggering bot-detection verification
-        prompts on every fresh username/password login). Convention: a file
+        login session avoids re-triggering a verification prompt on
+        every fresh username/password login). Convention: a file
         named `<portal>.json` under `JOBSCOUT_SESSION_DIR` (mounted from a
         per-portal k8s Secret, see k8s/secrets.md). Returns None if no such
         file exists -- a fetcher without a bootstrapped session just falls

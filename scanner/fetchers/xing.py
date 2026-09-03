@@ -2,10 +2,9 @@
 
 xing.com job search is Playwright-based (`ctx.browser`) for the same reason
 as linkedin.py -- a login-gated, JS-heavy search that a raw `httpx` GET
-can't meaningfully render. Xing is generally more permissive of automated
-access than LinkedIn, but the same mitigations apply: real Chromium, run
-from `home-node` (home IP), capped frequency (see linkedin.py's docstring for
-the full rationale, shared by both fetchers).
+can't meaningfully render. Same account-hygiene practices as linkedin.py
+apply: run from a home-network node, capped schedule (see linkedin.py's
+docstring for the full rationale, shared by both fetchers).
 
 **Persisted session, same as linkedin.py, adopted 2026-08-18**: the
 original `_login()` guessed `https://www.xing.com/login`, which is a plain

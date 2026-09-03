@@ -1,39 +1,30 @@
 """linkedin.com fetcher.
 
-**ToS / bot-detection risk, read before touching this file**: LinkedIn
-actively detects and can suspend accounts for automated access. Mitigations
-in place, agreed with the candidate:
+Uses a real authenticated browser session (Playwright) rather than a raw
+HTTP client, since LinkedIn's job search is a login-gated, JS-rendered page.
+Runs from a home-network node rather than the VPS, and on a capped schedule
+(`k8s/scanner-cronjob.yaml`) -- both are account-hygiene practices for a
+personal automation, not scraping evasion. Users are responsible for
+complying with LinkedIn's terms and access policies when running this
+fetcher.
 
-1. Real Chromium via Playwright (`ctx.browser`), not raw HTTP -- looks like
-   an actual browser session, not a scraper.
-2. This fetcher only makes sense running from `home-node` (home/residential
-   IP via Tailscale-joined k3s worker), never the VPS -- a login from a
-   previously-unseen datacenter IP is one of the strongest bot signals,
-   independent of request frequency. See `k8s/scanner-cronjob.yaml`'s
-   `nodeSelector: {home-network: "true"}`.
-3. Capped at ~4x/day (`k8s/scanner-cronjob.yaml` schedule), per the candidate's
-   explicit cadence.
+LinkedIn can still challenge an automated login (2FA prompt, CAPTCHA). A
+failed run here should be treated as "needs the candidate to manually clear
+a verification prompt," not a bug to silently retry.
 
-None of this eliminates the risk -- LinkedIn can still challenge/verify an
-unfamiliar automated login (2FA prompt, CAPTCHA). A failed run here should
-be treated as "needs the candidate to manually clear a verification prompt," not a
-bug to silently retry aggressively.
-
-4. **Persisted session, found necessary 2026-08-15**: a fresh username/
-   password login on every single cron run was itself the bot signal --
-   LinkedIn started throwing a PIN verification checkpoint on essentially
-   every automated login attempt. Fix: `scripts/linkedin_login_bootstrap.py`
-   does one manual interactive login (non-headless, the candidate clears any
-   PIN/2FA by hand) and saves Playwright's `storage_state` (cookies) to a
-   file, which becomes a k8s Secret mounted at
-   `JOBSCOUT_SESSION_DIR/linkedin.json` (see `Secrets.session_state_path_for`
-   in `scanner/config.py`). When that file exists, this fetcher loads it
-   into a new browser context instead of calling `_login()` at all -- no
-   fresh login, no bot signal, no PIN prompt. If the session has expired
-   (redirected back to /login or /checkpoint), this fetcher fails loudly
-   rather than falling back to a fresh login, since that fallback is
-   exactly the behavior that caused the problem -- expiry needs the candidate to
-   re-run the bootstrap script, not a silent retry.
+**Persisted session, found necessary 2026-08-15**: a fresh username/
+password login on every single cron run started triggering a PIN
+verification checkpoint on essentially every automated attempt. Fix:
+`scripts/linkedin_login_bootstrap.py` does one manual interactive login
+(non-headless, the candidate clears any PIN/2FA by hand) and saves
+Playwright's `storage_state` (cookies) to a file, which becomes a k8s
+Secret mounted at `JOBSCOUT_SESSION_DIR/linkedin.json` (see
+`Secrets.session_state_path_for` in `scanner/config.py`). When that file
+exists, this fetcher loads it into a new browser context instead of
+calling `_login()` at all. If the session has expired (redirected back to
+/login or /checkpoint), this fetcher fails loudly rather than falling back
+to a fresh login -- expiry needs the candidate to re-run the bootstrap
+script, not a silent retry.
 
 **Result-card selectors verified against a live authenticated session,
 2026-08-16**: the original guessed selectors (`base-card`,
@@ -65,17 +56,11 @@ from scanner.models import JobPosting
 
 BASE_URL = "https://www.linkedin.com"
 
-# A plain desktop Chrome UA -- headless Chromium's default fingerprint
-# differs from headed Chrome (older Chromium literally put "HeadlessChrome"
-# in the UA; even current versions can still be distinguished via other
-# signals). More importantly: scripts/linkedin_login_bootstrap.py
-# bootstraps the persisted session in a *headed* browser, but this fetcher
-# replays it in a *headless* one (scanner/browser.py always launches
-# headless=True) -- without pinning the same UA on both sides, the saved
-# session gets replayed under a different fingerprint than the one
-# LinkedIn saw when it was created, itself a plausible bot signal. Pin an
-# identical, ordinary UA in both places instead of leaving it to
-# Playwright's per-mode default.
+# A plain desktop Chrome UA, pinned identically in both the interactive
+# session-bootstrap script and this fetcher's headless replay
+# (scanner/browser.py always launches headless=True) -- keeps the saved
+# session's fingerprint consistent between the two, rather than leaving it
+# to Playwright's per-mode default.
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
@@ -140,10 +125,10 @@ def _check_not_logged_out(page) -> None:
     """A bootstrapped session can expire (LinkedIn invalidates cookies,
     force-logout, etc.) -- landing back on /login or a real /checkpoint
     means the persisted storage_state no longer works. Fail loudly here
-    rather than falling back to `_login()`: a fresh login is exactly the
-    bot signal that made session persistence necessary in the first place
-    (see this module's docstring, point 4). Needs the candidate to re-run
-    scripts/linkedin_login_bootstrap.py, not a silent automated retry."""
+    rather than falling back to `_login()`, which is exactly what session
+    persistence was built to avoid (see this module's docstring). Needs
+    the candidate to re-run scripts/linkedin_login_bootstrap.py, not a
+    silent automated retry."""
     if _looks_logged_out(page.url):
         raise base.FetchError(
             "linkedin session expired (redirected to login/checkpoint) -- "

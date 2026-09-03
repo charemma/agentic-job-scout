@@ -2,8 +2,8 @@
 session for scanner/fetchers/linkedin.py.
 
 Run this locally, with a real display (not headless, not in the cluster) --
-LinkedIn's bot-detection started throwing a PIN/2FA verification checkpoint
-on every fresh automated login, so the fetcher now reuses a saved session
+A fresh automated login started triggering a PIN/2FA verification
+checkpoint on every attempt, so the fetcher now reuses a saved session
 instead of logging in from scratch on every cron run. See
 linkedin.py's docstring (point 4) for the full rationale.
 

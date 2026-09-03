@@ -1,7 +1,7 @@
-"""Renders the exact shape of ~/Documents/Notes/Templates/Bewerbung.md so
-notes jobscout creates are indistinguishable from ones the candidate creates by hand
--- the existing `kuro run apply` flow (and the candidate's own manual review) can
-work with them unchanged.
+"""Renders the exact shape of a manually maintained application-note
+template, so notes jobscout creates are indistinguishable from ones the
+candidate creates by hand -- an existing manual workflow (and the
+candidate's own manual review) can work with them unchanged.
 
 `status` (draft/versendet/...) is the template's own manual tracking field
 and is deliberately left at "draft" here -- the candidate progresses it himself as
@@ -70,8 +70,8 @@ Gematchte Keywords: {matched}
 
 
 def _render_match_section(request: NotesRequest) -> str:
-    """Mirrors the ## Match-Evaluation section the kuro apply flow's Themis
-    step writes, so manual and jobscout-created notes stay interchangeable."""
+    """Mirrors the ## Match-Evaluation section a manual review flow writes,
+    so manual and jobscout-created notes stay interchangeable."""
     if request.match is None:
         return ""
     m = request.match

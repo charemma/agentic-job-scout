@@ -1,7 +1,6 @@
-# Match-Eval Rule (Themis)
+# Match-Eval Rule
 
 Blind-Evaluation einer Bewerbung als simuliertes Recruiter-Screening.
-Portiert aus cv/.kuro/agents/Themis.yaml -- Aenderungen dort nachziehen.
 
 DEIN AUFTRAG: Blind bewerten, nicht helfen. Du kennst den Entstehungsprozess
 der Bewerbung nicht. Du siehst nur das, was ein Screening-System sieht:

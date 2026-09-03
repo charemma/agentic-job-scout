@@ -6,10 +6,7 @@ unset and `CLAUDE_CODE_OAUTH_TOKEN` set (from `claude setup-token`, see
 k8s/secrets.md), `claude -p` authenticates via that long-lived OAuth token
 and usage is billed against the Claude Code subscription instead of
 metered per-token API pricing. Verified locally on `home-node` (headless
-invocation works without a TTY) and confirmed by the candidate's own experience
-running kuromaku the same way, with no API charges. Mirrors kuro's actual
-production pattern (CLI shellout), not its unused `Backend::Api` direct-API
-code path -- see the project's memory notes for that history.
+invocation works without a TTY), with no API charges.
 
 Switched 2026-08-17 from a mounted `credentials.json` (copied from a local
 `claude login` session) to `CLAUDE_CODE_OAUTH_TOKEN`: the mounted-file
@@ -55,7 +52,7 @@ class AnthropicCLIError(RuntimeError):
     the dedicated 502 treatment."""
 
 
-def complete(system: str, user: str, model: str = DEFAULT_MODEL, max_tokens: int = 4096) -> str:
+def complete(system: str, user: str, model: str = DEFAULT_MODEL) -> str:
     last_error: Exception | None = None
     for attempt in range(2):
         if attempt:

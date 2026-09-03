@@ -201,7 +201,7 @@ spec:
     - name: ghcr-pull-secret
   containers:
     - name: claude-login-debug
-      image: ghcr.io/charemma/jobscout-application-writer:latest
+      image: ghcr.io/charemma/agentic-job-scout-application-writer:latest
       command: ["sleep", "3600"]
       stdin: true
       tty: true
@@ -271,8 +271,8 @@ not `kubectl label`, so they survive a node rebuild):
   vault is only synced to this node).
 - `home-network: "true"` -- `jobscout-scanner`'s `nodeSelector`. Every
   portal now logs in via Playwright (see `scanner/fetchers/linkedin.py`'s
-  docstring for the residential-vs-datacenter-IP rationale, which applies
-  uniformly now, not just to xing/linkedin/solcom).
+  docstring for the home-network rationale, which applies uniformly now,
+  not just to xing/linkedin/solcom).
 
 See `infra-config`'s PR for the exact diff.
 

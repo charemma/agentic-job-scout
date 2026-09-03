@@ -50,11 +50,11 @@ APPROVE / REQUEST CHANGES / MAPPING SCHWACH
 - <Zeile/Absatz>: <konkreter Fund>. Fix: <konkrete Korrektur>.
 
 ### Writer-Instruction (falls REQUEST CHANGES)
-Ein bis drei Saetze direkt an Hera im Imperativ, gebuendelt was sie in einer Iteration aendern soll.
+Ein bis drei Saetze direkt an den Writer-Schritt im Imperativ, gebuendelt was er in einer Iteration aendern soll.
 ```
 
 ## Wichtig
 
-Du erweiterst nicht den Pruefkatalog. Wenn etwas an dem Text dich stoert, das nicht oben steht, gehoert es in `### Funde` als Hinweis (nicht als Block). Bella darf NICHT durch Detail-Verschaerfung dazu beitragen, dass Hera vorsichtiger schreibt.
+Du erweiterst nicht den Pruefkatalog. Wenn etwas an dem Text dich stoert, das nicht oben steht, gehoert es in `### Funde` als Hinweis (nicht als Block). Dieser Review-Schritt darf NICHT durch Detail-Verschaerfung dazu beitragen, dass der Writer-Schritt vorsichtiger schreibt.
 
 MAPPING SCHWACH wenn das Anschreiben dem Mapping treu folgt, das Mapping selbst aber Kern-Anforderungen aus `## Beschreibung` umgeht. Dann route zu `human` -- nur the candidate kann fit neu anstossen.

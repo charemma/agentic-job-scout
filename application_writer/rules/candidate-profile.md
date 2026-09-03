@@ -1,237 +1,125 @@
-# the candidate Background
+# Candidate Profile (Example)
 
-Hintergrund-Profil zu the candidate (the candidate). Lies das, bevor du sein Profil gegen eine Stellenbeschreibung mappst -- nicht alles steht 1:1 im CV, vieles ist emergent ueber Stationen oder OSS-Arbeit.
+This is the "rule" file that grounds every LLM assessment -- the analysis
+step in `pipeline.py` loads it as system context before judging a posting.
+It encodes background, hard requirements, and edge cases the way a human
+recruiter would carry them in their head, so the LLM judge has the same
+context a person reviewing postings for this candidate would have.
 
-Diese Datei lebt im cv repo (`.kuro/rules/`), damit sie auch ohne den `agent/` Seed-Cascade funktioniert.
+The content below is a **sanitized example**, not the real profile used in
+production -- rate expectations, exact employer history, and personal hard
+constraints have been replaced with representative placeholders. Swap this
+file for your own background and the rest of the pipeline (scanner,
+assessment, compose, review) works unchanged: this is the one file designed
+to be personalized per user.
 
-## Identitaet (Kurz)
+## Identity (short)
 
 - Senior Platform / DevOps / Security Engineer
-- ~20 Jahre Linux-Erfahrung, davon viele Jahre in regulierten Umgebungen
-- Freelancer, Schwerpunkt Plattform-Engineering und Security
-- Deutsch im Gespraech, Englisch in Code/Commits/Docs
+- Deep Linux background, including regulated environments
+- Freelancer, focus on platform engineering and security
 
-## Technisches Fundament
+## Technical foundation
 
-**Linux & Betriebssysteme:**
-- Debian/Ubuntu seit ueber 20 Jahren
-- NixOS deklarativ, Multi-Host-Konfiguration in eigenen OSS-Projekten
-- Embedded-Linux (Yocto-Stacks, Cross-Compilation)
+**Linux & operating systems:**
+- Long-standing Debian/Ubuntu experience
+- Declarative multi-host NixOS configuration in personal OSS projects
+- Embedded Linux (Yocto, cross-compilation)
 
-**Container & Orchestrierung:**
-- Docker fuer Deployment, Development, Sandboxing (langjaehrig)
-- Kubernetes, k3s (Plattform-Aufbau, Operations)
+**Containers & orchestration:**
+- Docker for deployment, development, sandboxing
+- Kubernetes, k3s (platform build-out and operations)
 
 **CI/CD & IaC:**
-- GitLab CI (Migration Jenkins -> GitLab gefuehrt), GitHub Actions, Jenkins, Dagger
-- Pulumi, Terraform, Ansible -- declarative ueber imperative
-- Nix Flakes fuer reproduzierbare Builds
+- GitLab CI, GitHub Actions, Jenkins, Dagger
+- Pulumi, Terraform, Ansible -- declarative over imperative
+- Nix Flakes for reproducible builds
 
-**Sprachen:**
-- Python 15+ Jahre (Tooling, Integrationen, Automation)
-- Rust (eigenes OSS-Projekt kuromaku)
-- Go (Microservices)
-- Bash (CLI-Tooling)
+**Languages:**
+- Python (tooling, integrations, automation)
+- Rust (own OSS project)
+- Go (microservices)
+- Bash (CLI tooling)
 
 **Security:**
-- OSCP zertifiziert
-- Bug Bounty / Responsible Disclosure (HackerOne, Bundeswehr)
-- Web Application Security: OWASP, Burp/ZAP, Pentest, Threat Modeling
-- Container-Hardening, Base-Image-Slimming, Secrets Management
-- Security Gates / SAST / SCA / SBOM in CI/CD
-
-**Regulatorisches:**
-- IEC 62304 Medizintechnik (Audit, Nachvollziehbarkeit)
+- OSCP certified
+- Bug bounty / responsible disclosure experience
+- Web application security: OWASP, Burp/ZAP, pentesting, threat modeling
+- Container hardening, base-image slimming, secrets management
+- Security gates / SAST / SCA / SBOM in CI/CD
 
 **AI / LLM:**
-- Praktische Erfahrung mit Claude, OpenAI/codex, Ollama
-- MCP, Agent-Workflows
-- Eigenes OSS-Projekt: kuromaku (Rust CLI fuer reproduzierbare AI-Agenten-Teams)
-- AI-Tooling Beratung bei Client A (Claude Code + Copilot in DevContainer-Workflows)
-- Eigenes Agenten-Framework fuer seine Mobile-First-App-Entwicklung (praktischer
-  Agent-Einsatz im eigenen Produktivprozess, aktuell nicht oeffentlich)
-- jobscout selbst: die hier laufende Pipeline (Scanner -> LLM-Assessment ->
-  LLM-Compose -> Obsidian/ntfy-Anbindung) ist ein selbst gebautes, produktiv
-  laufendes Multi-Agent-/LLM-System -- direkter Beleg fuer LLM-/Agent-
-  Engineering, nicht nur -Nutzung
+- Practical experience with Claude, OpenAI/Codex, Ollama
+- MCP, agent workflows
+- Own OSS project: a Rust CLI for reproducible AI agent teams
+- This project itself (jobscout) -- a continuously running, self-hosted
+  LLM workflow with role-specific stages for assessment, drafting,
+  factual review, and blind scoring -- is direct evidence of building and
+  operating a real LLM system end to end, not just prompting one
 
-## Open Source / Eigene Projekte
+## Open source / own projects
 
-- **kuromaku** (Rust): CLI fuer reproduzierbare AI-Agenten-Teams mit YAML-Graphen, deterministischem Audit-Trail
-- **Multi-Host-NixOS-Konfiguration** (deklarativ, ueber mehrere Hosts)
-- **Gehaertete NixOS-IoT-Plattform** mit Nix Flakes und Cross-Compilation
-- Diverse Tooling-Projekte (Anker fuer Workday-Tracking, etc.)
+- A Rust CLI for reproducible AI agent teams (YAML-defined graphs,
+  deterministic audit trail)
+- Declarative multi-host NixOS configuration
+- A hardened NixOS IoT platform with Nix Flakes and cross-compilation
+- Assorted tooling projects
 
-## Wie the candidate arbeitet (Cross-Cutting Strengths)
+## How this candidate works (cross-cutting strengths)
 
-Diese Themen entstehen emergent aus seinen Stationen, nicht aus einer einzelnen CV-Zeile:
+- **Platform thinking**: builds, operates, and hardens in parallel --
+  not "knows tool X" but "builds, runs, and secures platforms across
+  multiple engagements." Self-service models, DevContainer environments,
+  operating-model definition.
+- **Security runs through everything**: not a checkbox certification, but
+  woven into platform work directly.
+- **Automation as a default**: if it's done twice, it gets scripted.
+- **Reproducibility as a habit**: Nix Flakes, deterministic builds,
+  versioned configs.
+- **Systems thinking**: "what happens when someone adds a second or third
+  one of these?" is a standing question, not an afterthought.
 
-- **Plattform-Denke**: Aufbau + Betrieb + Hardening parallel. Nicht "kennt Tool X" sondern "baut, betreibt und sichert Plattformen ab ueber mehrere Stationen". Self-Service-Modelle, Coder/DevContainer-Umgebungen, Operating-Model-Definition.
-- **Security durchgaengig**: OSCP ist kein Zertifikats-Bullet, sondern fliesst direkt in Plattform-Arbeit ein. Web-Reviews, Container-Hardening, Disclosure-Praxis -- alles am Produkt, nicht als isoliertes Hobby.
-- **Automatisierung als Leitprinzip**: Wenn er etwas zweimal macht, scripted er's. just > nix > make > shell. Pulumi, Ansible, Dagger ueber alle Stationen.
-- **Reproduzierbarkeit obsessiv**: Nix Flakes, deterministic builds, versioned configs. Same inputs = same outputs.
-- **Architektur-Denken**: Systeme statt Features. "Was passiert wenn jemand das zweite oder dritte davon anlegt?" ist Standardfrage. Design fuer N von Anfang an.
-- **Knapp und direkt**: "schrott" wenn schrott, "gut" wenn gut. Keine Diplomatie-Polsterung. Pragmatik vor Eleganz.
+## Match-analysis factors
 
-## Wichtige Faktoren fuer Match-Analyse
+When mapping this candidate against a job posting:
 
-Wenn du the candidate gegen eine Stellenbeschreibung mappst:
+1. **Domain over tool**: a specific unfamiliar tool is a 2-3 week ramp-up.
+   If the core domain (platform engineering, container orchestration,
+   security) is covered, that's a fit -- tool gaps are not disqualifying.
+2. **OSS and personal projects count**: experience demonstrated in the
+   candidate's own repos counts equally to client-project experience, not
+   as "just a hobby."
+3. **Security is cross-cutting**: if a posting names security, treat it as
+   built into the platform work already described, not a bonus skill.
+4. **Frontend is a gap**: React/Vue/Svelte and modern BaaS stacks are
+   explicitly out of scope -- postings requiring those should be scored
+   accordingly.
 
-1. **Domain vor Tool**: Konkrete Tools (Colmena, NixOps, Coolify, etc.) sind 2-3 Wochen Ramp-Up. Wenn die Core-Domain (NixOS, Platform Engineering, Container-Orchestrierung, Security) belegt ist, ist the candidate im Fit -- Tool-Gaps sind keine Disqualifikation.
-2. **OSS und Eigenarbeit gilt**: NixOS-Erfahrung ist nicht nur in Kundenprojekten belegt, sondern in seinen eigenen OSS-Repos. Das ist gleich-wertig als Beleg, nicht "nur Hobby".
-3. **Security ist Querschnitt**: Wenn die Stelle Security nennt, ist das fuer the candidate kein Bonus-Skill, sondern in seine Plattform-Arbeit eingebaut -- entsprechend selbstbewusst kalibrieren.
-4. **Frontend = Luecke**: React, Vue, Svelte und moderne BaaS-Stacks (Supabase, Firebase) hat er nicht. Bei solchen Stellen ist der Fit klar geschnitten ("Backend/Plattform-Seite, Frontend nicht im Profil").
+## Employment form
 
-## Beschaeftigungsform (Stand 2026-08)
+Open to both contracting and permanent (part-time-to-full-time) roles,
+evaluated equally as long as the remaining criteria fit.
 
-the candidate ist nicht mehr nur an Freelance/Contracting interessiert, sondern seit
-2026-08-12 explizit offen fuer **Festanstellung**, insbesondere Teilzeit
-(50%) fuer 3-4 Monate mit Option auf 100% danach. Contracting bleibt weiter
-attraktiv, ist aber nicht mehr die einzige akzeptierte Form -- beide
-Beschaeftigungsformen werden gleichwertig bewertet, sofern die restlichen
-Kriterien passen.
+## Example hard gate: domain focus
 
-## Harte Bedingung: nur AI-Security
+**Illustrative rule, not the real production one.** A real profile might
+encode a hard requirement like "only postings with clear AI-security
+relevance pass" -- demonstrating that this pipeline can encode a genuine
+non-negotiable gate (not just a soft keyword weight), independent of how
+strong the rest of the technical match looks. The point being shown here:
+the assessment step is a real LLM-driven judgment against prose rules, not
+a keyword scorer with a threshold.
 
-**Stand 2026-08-14, geaendert:** the candidate will nur noch Stellen mit klarem
-AI-Security-Bezug. Vorher war AI-Security nur eine Praeferenz/Gewichtung
-("Platform Engineering ohne AI-Security bleibt gueltig") -- das gilt nicht
-mehr. Reine Platform-Engineering-, DevOps- oder klassische AppSec-Stellen
-**ohne** AI-Security-Bezug sind ab jetzt **kein** gueltiger Match mehr,
-auch wenn der technische Fit sonst exzellent ist. Diese Bedingung gilt
-**fuer beide Beschaeftigungsformen** (Festanstellung wie Contracting) --
-was sich je nach Beschaeftigungsform unterscheidet, ist NICHT ob
-AI-Security noetig ist (immer ja), sondern was zusaetzlich noch hart
-verlangt wird, siehe die beiden Unterabschnitte unten.
+## Positive signal example
 
-- **Hard-Gate**: Hat die Stellenbeschreibung keinen erkennbaren
-  AI-Security-Bezug (LLM Security, Prompt Injection, AI Red Teaming,
-  AI Governance/Compliance, MLSecOps, Model/Data Poisoning, AI Supply
-  Chain Security, Security-Arbeit an/mit AI-Systemen oder -Infrastruktur)
-  -- **`fit_level` maximal `schwach`**, unabhaengig von allem anderen.
-  Klassische Application Security, generische IT-Security oder reines
-  Platform Engineering/DevOps ohne AI-Bezug zaehlen NICHT als AI-Security,
-  auch wenn "Security" im Titel steht.
-- Bei echtem AI-Security-Bezug: sein OSCP + Bug-Bounty-Hintergrund plus
-  praktische LLM/Agent-Erfahrung (Claude, MCP, kuromaku) ist ein echter
-  Beleg, entsprechend selbstbewusst bewerten -- Tool-Luecken sind hier
-  keine Disqualifikation.
+A posting explicitly open EU-wide (not restricted to one country) is
+treated as a standout signal and surfaced prominently in the notification
+-- an example of how nuanced, non-obvious criteria can be encoded as plain
+prose rather than structured filters.
 
-### Erweiterung: AI-Infrastruktur zaehlt auch als AI-Security-Bezug
+## What this candidate does not do
 
-**Stand 2026-08-20:** Ausloeser war ein Voicebot-Projekt im Gesundheitssektor
-(DevOps/Kubernetes-Betrieb fuer ein AI-System mit sensiblen Gesundheitsdaten),
-das faelschlich auf `schwach` lief, weil die Ausschreibung kein explizites
-Security-Wort enthielt -- obwohl der Betrieb eines AI-Systems mit sensiblen
-Daten ein reales Security-Thema ist, das dort nur nicht ausgeschrieben war.
-
-Das Hard-Gate oben gilt weiter, aber "erkennbarer AI-Security-Bezug" schliesst
-jetzt auch ein:
-
-- **DevOps-/Platform-Engineering-Betrieb AN einem AI/LLM-System** (Hosting,
-  CI/CD, Infrastruktur, High-Availability fuer AI-Komponenten, Voicebots,
-  Chatbots, RAG-Systeme etc.) -- auch ohne explizites Security-Wort in der
-  Anzeige. Der Betrieb eines produktiven AI-Systems bringt implizit
-  Security-relevante Fragen mit (Zugriffsschutz, Datenfluss, Modell-/
-  Prompt-Handling), und the candidate bringt mit OSCP/Bug-Bounty genau das Profil
-  mit, um das perspektivisch einzubringen.
-- Besonders starkes Signal, wenn das AI-System **sensible Daten**
-  verarbeitet (Gesundheitsdaten, personenbezogene Daten, Finanzdaten) --
-  das Security-Potenzial ist dann besonders offensichtlich, auch ohne
-  explizite Erwaehnung.
-- Reine AI-*Feature*-Entwicklung ohne Infrastruktur-/Betriebsbezug (z.B.
-  reines Prompt-Engineering oder Modelltraining ohne Platform-Anteil)
-  zaehlt NICHT automatisch -- der Match kommt ueber die DevOps-/
-  Platform-Rolle AM AI-System, nicht ueber "irgendwas mit AI".
-
-Bei einem Treffer ueber diese Erweiterung (AI-Infrastruktur statt expliziter
-Security) erreicht `fit_level` maximal `solide`, nicht `stark` -- `stark`
-bleibt Stellen mit explizitem Security-Bezug vorbehalten. Im `summary`
-explizit benennen, dass Security nicht ausgeschrieben ist, sondern aus dem
-AI-Infrastruktur-Betrieb (ggf. + sensiblen Daten) abgeleitet wurde, damit
-the candidate das beim Lesen der Notification sofort einordnen kann.
-
-### Erweiterung 2: Reines AI-Engineering zaehlt, wenn ueber eigene Referenzprojekte geframed
-
-**Stand 2026-09-02:** Ausgeloest durch eine "Senior AI Engineer" Rolle
-(LLM-/Agent-/MCP-Integration, agentische AI-Plattform, chemische Industrie)
-beim selben Kunden wie ein bereits gematchtes DevOps-Posting -- bisher als
-`schwach` verworfen ("reines Feature-/Integrations-Engineering ohne
-Platform- oder Security-Bezug"), obwohl the candidate fuer genau sowas echte, wenn
-auch eigene, Referenzpunkte hat.
-
-Zusaetzlich zu den beiden Erweiterungen oben zaehlt jetzt auch: **reine
-AI-Engineering-/LLM-Integrationsrollen** (LLM anbinden, Agent-Workflows
-bauen, MCP-Integration, Agentic-AI-Features) -- auch OHNE Platform-Ops- oder
-Security-Anteil in der Stelle selbst -- WENN the candidate sich darueber gut framen
-kann ueber konkrete eigene Referenzprojekte:
-
-- **Client A**: Claude Code Rules/Setup fuer das Entwicklerteam bereitgestellt
-  (AI-Tooling-Rollout in einer Produktivumgebung, kein Hobby-Setup)
-- **Eigenes Agenten-Framework** fuer seine Mobile-First-App-Entwicklung
-  (praktischer Agent-Einsatz im eigenen Produktivprozess)
-- **jobscout selbst**: die hier laufende Pipeline (Scanner -> LLM-Assessment
-  -> LLM-Compose -> Obsidian/ntfy-Anbindung) ist ein selbst gebautes,
-  produktiv laufendes Multi-Agent-/LLM-System -- direkter Beleg fuer
-  LLM-/Agent-Engineering, nicht nur -Nutzung
-
-Im `summary` explizit mitgeben:
-
-- Diese Referenzprojekte sind **eigene/private Projekte, aktuell nicht
-  oeffentlich/open source** -- kein Portfolio-Link vorzeigbar. Falls die
-  Stelle einen oeffentlichen Track Record verlangt, das als offene
-  Frage/Luecke benennen, nicht verschweigen.
-- Match ueber diese Erweiterung ist schwaecher belegt als ueber bezahlte
-  Kundenarbeit -- `fit_level` erreicht maximal `solide`, nie `stark`, auch
-  wenn der inhaltliche Fit sonst gut aussieht.
-- Reine ML-Research-/Data-Science-Rollen (Modelltraining, keine
-  Integrations-/Engineering-Arbeit) zaehlen weiterhin NICHT -- siehe "Was er
-  NICHT macht" unten. Diese Erweiterung gilt nur fuer AI-*Engineering*
-  (LLMs/Agents in Software integrieren), nicht fuer ML-Forschung.
-
-### Bei Contracting/Freelancing: Kombi mit DevOps/Platform Engineering gewuenscht
-
-AI-Security kombiniert mit DevOps oder Platform Engineering ist der
-**Wunschfall**, nicht nur "toleriert" (z.B. "Platform Engineer mit
-AI-Security-Anteil", "Security Engineer fuer AI/LLM-Infrastruktur",
-"DevOps mit MLSecOps-Fokus"). AI-Security bleibt trotzdem Pflicht (siehe
-Hard-Gate oben) -- diese Kombination ist einfach das Profil, das am besten
-zu the candidate passt, entsprechend hoch bewerten wenn beides erkennbar ist.
-
-### Bei Festanstellung: AI-Security UND volles Remote, beides hart
-
-**Stand 2026-08-14, praezisiert:** Fuer Festanstellungs-Positionen muessen
-**beide** Bedingungen gleichzeitig erfuellt sein -- AI-Security-Bezug
-(Hard-Gate oben) UND volles Remote. Kein Hybrid, keine Vor-Ort-Pflicht,
-auch nicht "2 Tage/Woche im Büro". Faellt eine der beiden Bedingungen weg,
-gilt der Match nicht, unabhaengig vom sonstigen technischen Fit.
-
-- Steht in der Stellenbeschreibung explizit Hybrid- oder Vor-Ort-Pflicht bei
-  einer Festanstellung: **`fit_level` maximal `schwach`**, unabhaengig davon
-  wie gut der technische Fit sonst ist. Das ist ein Hard-Cap, keine
-  Abwaegung -- und kommt zusaetzlich zum AI-Security-Hard-Gate oben, nicht
-  anstelle davon.
-- Bei Contracting-Projekten gilt diese Remote-Regel nicht als eigener
-  Hard-Cap (dort war Remote schon vorher ueber `remoteInPercent` im
-  Portal-Filter abgedeckt) -- die Unterscheidung ist: Festanstellung =
-  Remote hart, Contracting = wie gehabt ueber den Portal-Filter.
-- Ist der Remote-Status in der Ausschreibung unklar/nicht genannt: nicht
-  automatisch disqualifizieren, aber im `summary` explizit als offene Frage
-  benennen ("Remote-Modell nicht spezifiziert -- pruefen").
-
-## Positives Signal: EU-weit / nicht auf Deutschland begrenzt
-
-Wenn eine Stelle explizit **EU-weit** oder nicht auf Deutschland beschraenkt
-ausgeschrieben ist (z.B. "remote across the EU", "any EU country",
-kein Wohnsitz-/Arbeitsort-Zwang auf DE) -- das ist ein **"Jackpot"**-Signal.
-Im `summary`-Feld explizit hervorheben (z.B. "EU-weit ausgeschrieben --
-Jackpot-Signal"), damit es in der ntfy-Notification sichtbar landet und
-the candidate es auf den ersten Blick erkennt, ohne die volle Ausschreibung lesen zu
-muessen.
-
-## Was er NICHT macht
-
-- Reine Frontend-Entwicklung (React, Vue, Angular)
-- Pure Datenanalyse / ML-Modellierung (ML-Research, kein Engineering-Setup)
-- Sales / Business Development -- er ist Engineer, kein Salesman
-- Compliance-Beratung ausserhalb seiner technischen Domain (er IST kein Auditor)
+- Pure frontend development (React, Vue, Angular)
+- Pure data analysis / ML research without an engineering component
+- Sales / business development
+- Compliance consulting outside their technical domain

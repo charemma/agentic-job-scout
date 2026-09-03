@@ -1,7 +1,6 @@
-"""Analysis -> write -> self-review pipeline (Athena/Kalliope/Bella
-equivalents from cv/.kuro), run unattended via headless `claude -p`
-(subscription billing, see claude_cli.py) -- the same CLI-shellout pattern
-kuro uses in production, just driven from Python instead of flow YAML.
+"""Analysis -> write -> self-review pipeline, run unattended via headless
+`claude -p` (subscription billing, see claude_cli.py) rather than calling
+a provider API directly.
 
 Bounded: one review round, at most one writer retry on REQUEST CHANGES. No
 human-in-the-loop here -- that happens downstream. A still-REQUEST-CHANGES
@@ -24,7 +23,6 @@ from application_writer import claude_cli
 from application_writer.models import ComposeRequest, FitAnalysis, MatchScore, ReviewResult
 
 RULES_DIR = Path(__file__).parent / "rules"
-TARGET_RATE_EUR_PER_HOUR = 100
 
 
 def load_rule(name: str) -> str:
@@ -159,6 +157,7 @@ def write(
     common: dict[str, str],
     fit: FitAnalysis,
     retry_instruction: str | None = None,
+    target_rate: int = 100,
 ) -> tuple[str, str]:
     system = (
         load_rule("senior-cover-letter")
@@ -174,7 +173,7 @@ def write(
         + f"\n\n## Fit-Analyse\n{fit.raw_text}"
         + f"\n\n## Aktuelles profil.tex\n{profil_tex}"
         + f"\n\n## common/experience.tex\n{common.get('experience', '')}"
-        + f"\n\n## Zielrate\n{TARGET_RATE_EUR_PER_HOUR} EUR/Stunde"
+        + f"\n\n## Zielrate\n{target_rate} EUR/Stunde"
     )
     if retry_instruction:
         user += f"\n\n## Ueberarbeitung noetig (Reviewer-Feedback)\n{retry_instruction}"
@@ -244,16 +243,18 @@ def evaluate(
         raise PipelineError(f"match-eval json block didn't match MatchScore: {exc}") from exc
 
 
-def compose(request: ComposeRequest, profil_tex: str, common: dict[str, str]) -> ComposedApplication:
+def compose(
+    request: ComposeRequest, profil_tex: str, common: dict[str, str], target_rate: int = 100
+) -> ComposedApplication:
     fit = analyse(request, profil_tex, common)
-    anschreiben, tailored_profil_tex = write(request, profil_tex, common, fit)
+    anschreiben, tailored_profil_tex = write(request, profil_tex, common, fit, target_rate=target_rate)
     result = review(anschreiben, tailored_profil_tex, profil_tex, common)
 
     review_retried = False
     if result.verdict == "REQUEST CHANGES" and result.writer_instruction:
         review_retried = True
         anschreiben, tailored_profil_tex = write(
-            request, profil_tex, common, fit, retry_instruction=result.writer_instruction
+            request, profil_tex, common, fit, retry_instruction=result.writer_instruction, target_rate=target_rate
         )
         result = review(anschreiben, tailored_profil_tex, profil_tex, common)
 

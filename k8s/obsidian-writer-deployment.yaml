@@ -32,10 +32,24 @@ spec:
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: obsidian-writer
-          image: ghcr.io/charemma/jobscout-obsidian-writer:latest
+          image: ghcr.io/charemma/agentic-job-scout-obsidian-writer:latest
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
           ports:
             - containerPort: 8000
           envFrom:
@@ -62,5 +76,5 @@ spec:
       volumes:
         - name: vault
           hostPath:
-            path: /home/charemma/Documents/Notes
+            path: /home/user/Documents/Notes
             type: Directory

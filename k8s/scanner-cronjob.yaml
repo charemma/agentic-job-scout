@@ -1,19 +1,19 @@
-# Pinned to home-node (home network, not the VPS's datacenter IP): the
-# xing/linkedin/solcom fetchers use Playwright-driven logins, and a login
-# from a residential IP is meaningfully less bot-suspicious than one from a
-# cloud/VPS IP (see scanner/fetchers/linkedin.py's docstring for the full
+# Pinned to a home-network node rather than the VPS: the xing/linkedin/
+# solcom fetchers use Playwright-driven logins, and running from a
+# consistent, non-datacenter network is an account-hygiene practice for
+# those (see scanner/fetchers/linkedin.py's docstring for the full
 # rationale). The `home-network: "true"` label is set declaratively on
-# home-node's k3s agent config in infra-config (services/k3s/agent.nix),
-# same pattern as obsidian-writer's `vault-access` label -- not `kubectl
-# label`, so it survives a node rebuild.
+# that node's k3s agent config in the infra-config repo (services/k3s/
+# agent.nix), same pattern as obsidian-writer's `vault-access` label --
+# not `kubectl label`, so it survives a node rebuild.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: jobscout-scanner
 spec:
   # 6x/day, 8-19 Uhr only -- the candidate doesn't need results overnight, and this
-  # stays comfortably under an hourly cadence for the login-based portals'
-  # bot-detection risk profile. timeZone is explicit because CronJob
+  # stays comfortably under an hourly cadence for the login-based portals.
+  # timeZone is explicit because CronJob
   # schedules default to UTC regardless of the node's own tz (Europe/Athens
   # per infra-config) -- without this the window would run 2-3h too early.
   schedule: "0 8-19/2 * * *"
@@ -36,10 +36,25 @@ spec:
               effect: NoSchedule
           imagePullSecrets:
             - name: ghcr-pull-secret
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: scanner
-              image: ghcr.io/charemma/jobscout-scanner:latest
+              image: ghcr.io/charemma/agentic-job-scout-scanner:latest
               imagePullPolicy: IfNotPresent
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 512Mi
+                limits:
+                  cpu: 1000m
+                  memory: 1Gi
               envFrom:
                 - secretRef:
                     name: jobscout-scanner-secrets

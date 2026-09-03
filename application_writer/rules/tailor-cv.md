@@ -1,12 +1,11 @@
 # Tailor-CV Rule
 
-Pragma fuer den `tailor-cv` Step im `apply` Flow. Tycho liest und befolgt
-diese Regel zusaetzlich zu seinen Default-Rules.
+Pragma fuer den `tailor-cv` Step im `apply` Flow, zusaetzlich zu den Default-Rules dieses Schritts.
 
 ## Eingaben
 
 - Obsidian-Notiz, gefunden ueber `id: {{vars.id}}` im Frontmatter unter
-  `~/Documents/Notes/1 Projects/Bewerbung Projekt/`.
+  `~/Notes/1 Projects/Applications/`.
 - Block `## Analyse/Fit` in derselben Notiz, mit:
   - `### Profilwahl` -- akzeptiert nur `pe` (Master-Profil).
   - `### CV-Verbesserungs-Vorschlaege` -- Bulletliste mit File:zeile-Ankern.
@@ -25,7 +24,7 @@ Anwenden ("APPLY"):
 
 - Anker matcht `profil.tex(:\\d+)?`.
 - Bullet beschreibt eine Umformulierung oder Priorisierung vorhandener
-  Inhalte (Athenas "Formulierungs-Idee").
+  Inhalte (eine "Formulierungs-Idee" aus dem Analyse-Schritt).
 
 Ueberspringen ("SKIP", begruendet im task-output):
 
@@ -56,7 +55,7 @@ Im Zweifel: SKIP und im task-output dokumentieren.
 
 ## LaTeX-Escapes
 
-Athenas Vorschlaege sind reiner Text. Beim Einsetzen in `profil.tex` die
+Die Vorschlaege aus dem Analyse-Schritt sind reiner Text. Beim Einsetzen in `profil.tex` die
 LaTeX-Sonderzeichen escapen, sonst bricht `lualatex`:
 
 - `&` -> `\&`

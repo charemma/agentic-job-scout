@@ -10,10 +10,10 @@ resources:
 images:
 - name: ghcr.io/charemma/agentic-job-scout-application-writer
   newName: ghcr.io/charemma/agentic-job-scout-application-writer
-  newTag: sha-c4b8786
+  newTag: sha-6a95d7d
 - name: ghcr.io/charemma/agentic-job-scout-obsidian-writer
   newName: ghcr.io/charemma/agentic-job-scout-obsidian-writer
-  newTag: sha-c4b8786
+  newTag: sha-6a95d7d
 - name: ghcr.io/charemma/agentic-job-scout-scanner
   newName: ghcr.io/charemma/agentic-job-scout-scanner
-  newTag: sha-c4b8786
+  newTag: sha-6a95d7d

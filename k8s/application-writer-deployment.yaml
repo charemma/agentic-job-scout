@@ -16,10 +16,25 @@ spec:
     spec:
       imagePullSecrets:
         - name: ghcr-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: application-writer
-          image: ghcr.io/charemma/jobscout-application-writer:latest
+          image: ghcr.io/charemma/agentic-job-scout-application-writer:latest
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           ports:
             - containerPort: 8000
           envFrom:

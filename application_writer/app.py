@@ -16,6 +16,8 @@ from pathlib import Path
 from fastapi import FastAPI, Header, HTTPException
 
 from application_writer import applications_repo, cv_client, notifier, obsidian_client, pipeline
+from application_writer.llm.config import load_llm_config
+from application_writer.llm.router import build_router
 from application_writer.models import ComposeRequest
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -39,6 +41,12 @@ NTFY_TOKEN = os.environ["NTFY_TOKEN"]
 
 TARGET_RATE_EUR_PER_HOUR = int(os.environ.get("TARGET_RATE_EUR_PER_HOUR", "100"))
 CANDIDATE_NAME = os.environ.get("CANDIDATE_NAME", "Candidate")
+
+# Which LLM backend/model handles each pipeline stage -- see config.yaml's
+# `llm:` section and application_writer/llm/router.py. Built once at
+# import time so a bad config fails the container on startup, not on the
+# first request.
+LLM_ROUTER = build_router(load_llm_config())
 
 app = FastAPI(title="application-writer")
 
@@ -70,7 +78,7 @@ def assess(
     profil_tex, common = cv_client.fetch_profile(CV_SERVICE_BASE_URL, CV_SERVICE_TOKEN)
 
     try:
-        fit = pipeline.analyse(request, profil_tex, common)
+        fit = pipeline.analyse(request, profil_tex, common, LLM_ROUTER)
     except pipeline.PipelineError as exc:
         log.error("[%s] assess failed: %s", request_id, exc)
         raise HTTPException(status_code=502, detail=f"LLM assessment failed: {exc}") from exc
@@ -82,7 +90,7 @@ def assess(
         # ever being notified anyway. Best-effort: a scoring failure must
         # not turn a successful assessment into a 502.
         try:
-            score = pipeline.evaluate(request, profil_tex, common)
+            score = pipeline.evaluate(request, profil_tex, common, LLM_ROUTER)
             match_score = score.model_dump(exclude={"raw_text"})
         except pipeline.PipelineError as exc:
             log.warning("[%s] match scoring failed (non-fatal): %s", request_id, exc)
@@ -107,7 +115,7 @@ def compose(
     profil_tex, common = cv_client.fetch_profile(CV_SERVICE_BASE_URL, CV_SERVICE_TOKEN)
 
     try:
-        composed = pipeline.compose(request, profil_tex, common, target_rate=TARGET_RATE_EUR_PER_HOUR)
+        composed = pipeline.compose(request, profil_tex, common, LLM_ROUTER, target_rate=TARGET_RATE_EUR_PER_HOUR)
     except pipeline.PipelineError as exc:
         log.error("[%s] pipeline failed, not committing: %s", request_id, exc)
         raise HTTPException(status_code=502, detail=f"LLM pipeline failed: {exc}") from exc

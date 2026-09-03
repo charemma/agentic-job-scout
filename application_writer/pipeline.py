@@ -1,13 +1,17 @@
-"""Analysis -> write -> self-review pipeline, run unattended via headless
-`claude -p` (subscription billing, see claude_cli.py) rather than calling
-a provider API directly.
+"""Analysis -> write -> self-review pipeline, run unattended.
+
+Each stage below calls `router.for_stage(<stage name>)` to get the LLM
+backend configured for that stage (see application_writer/llm/) -- this
+module has no knowledge of any concrete CLI, API, or provider. Which
+backend/model handles which stage is a config.yaml change (see the `llm:`
+section), not a code change.
 
 Bounded: one review round, at most one writer retry on REQUEST CHANGES. No
 human-in-the-loop here -- that happens downstream. A still-REQUEST-CHANGES
 result after the retry, or MAPPING SCHWACH at any point, is committed with
-status="needs-review" rather than "composed" (see app.py), so the candidate reviews
-it before sending -- consistent with the project's non-goal of never
-auto-submitting applications.
+status="needs-review" rather than "composed" (see app.py), so the candidate
+reviews it before sending -- consistent with the project's non-goal of
+never auto-submitting applications.
 """
 
 from __future__ import annotations
@@ -19,7 +23,8 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from application_writer import claude_cli
+from application_writer.llm.router import BackendRouter
+from application_writer.llm.types import LLMRequest
 from application_writer.models import ComposeRequest, FitAnalysis, MatchScore, ReviewResult
 
 RULES_DIR = Path(__file__).parent / "rules"
@@ -136,14 +141,14 @@ def _posting_context(request: ComposeRequest) -> str:
     )
 
 
-def analyse(request: ComposeRequest, profil_tex: str, common: dict[str, str]) -> FitAnalysis:
+def analyse(request: ComposeRequest, profil_tex: str, common: dict[str, str], router: BackendRouter) -> FitAnalysis:
     system = load_rule("candidate-profile") + "\n\n" + ANALYSIS_INSTRUCTIONS
     user = (
         _posting_context(request)
         + f"\n\n## Aktuelles profil.tex\n{profil_tex}"
         + f"\n\n## common/experience.tex\n{common.get('experience', '')}"
     )
-    raw = claude_cli.complete(system, user)
+    raw = router.for_stage("analysis").complete(LLMRequest(system=system, user=user)).text
     data = _extract_json_block(raw)
     try:
         return FitAnalysis(raw_text=raw, **data)
@@ -156,6 +161,7 @@ def write(
     profil_tex: str,
     common: dict[str, str],
     fit: FitAnalysis,
+    router: BackendRouter,
     retry_instruction: str | None = None,
     target_rate: int = 100,
 ) -> tuple[str, str]:
@@ -178,13 +184,15 @@ def write(
     if retry_instruction:
         user += f"\n\n## Ueberarbeitung noetig (Reviewer-Feedback)\n{retry_instruction}"
 
-    raw = claude_cli.complete(system, user)
+    raw = router.for_stage("writing").complete(LLMRequest(system=system, user=user)).text
     anschreiben = _extract_section(raw, "anschreiben")
     tailored_profil_tex = _extract_section(raw, "profil_tex")
     return anschreiben, tailored_profil_tex
 
 
-def review(anschreiben: str, tailored_profil_tex: str, profil_tex: str, common: dict[str, str]) -> ReviewResult:
+def review(
+    anschreiben: str, tailored_profil_tex: str, profil_tex: str, common: dict[str, str], router: BackendRouter
+) -> ReviewResult:
     system = (
         load_rule("review-essentials") + "\n\n" + load_rule("customer-anonymization") + "\n\n" + REVIEW_INSTRUCTIONS
     )
@@ -194,7 +202,7 @@ def review(anschreiben: str, tailored_profil_tex: str, profil_tex: str, common: 
         f"## Original profil.tex (Beleg-Quelle)\n{profil_tex}\n\n"
         f"## common/experience.tex (Beleg-Quelle)\n{common.get('experience', '')}"
     )
-    raw = claude_cli.complete(system, user)
+    raw = router.for_stage("review").complete(LLMRequest(system=system, user=user)).text
     return _parse_review(raw)
 
 
@@ -219,6 +227,7 @@ def evaluate(
     request: ComposeRequest,
     profil_tex: str,
     common: dict[str, str],
+    router: BackendRouter,
     anschreiben: str | None = None,
 ) -> MatchScore:
     """Blind screening simulation. Deliberately NOT given the fit analysis,
@@ -235,7 +244,7 @@ def evaluate(
     )
     if anschreiben:
         user += f"\n\n## Anschreiben\n{anschreiben}"
-    raw = claude_cli.complete(system, user)
+    raw = router.for_stage("scoring").complete(LLMRequest(system=system, user=user)).text
     data = _extract_json_block(raw)
     try:
         return MatchScore(raw_text=raw, **data)
@@ -244,31 +253,43 @@ def evaluate(
 
 
 def compose(
-    request: ComposeRequest, profil_tex: str, common: dict[str, str], target_rate: int = 100
+    request: ComposeRequest,
+    profil_tex: str,
+    common: dict[str, str],
+    router: BackendRouter,
+    target_rate: int = 100,
 ) -> ComposedApplication:
-    fit = analyse(request, profil_tex, common)
-    anschreiben, tailored_profil_tex = write(request, profil_tex, common, fit, target_rate=target_rate)
-    result = review(anschreiben, tailored_profil_tex, profil_tex, common)
+    fit = analyse(request, profil_tex, common, router)
+    anschreiben, tailored_profil_tex = write(request, profil_tex, common, fit, router, target_rate=target_rate)
+    result = review(anschreiben, tailored_profil_tex, profil_tex, common, router)
 
     review_retried = False
     if result.verdict == "REQUEST CHANGES" and result.writer_instruction:
         review_retried = True
         anschreiben, tailored_profil_tex = write(
-            request, profil_tex, common, fit, retry_instruction=result.writer_instruction, target_rate=target_rate
+            request,
+            profil_tex,
+            common,
+            fit,
+            router,
+            retry_instruction=result.writer_instruction,
+            target_rate=target_rate,
         )
-        result = review(anschreiben, tailored_profil_tex, profil_tex, common)
+        result = review(anschreiben, tailored_profil_tex, profil_tex, common, router)
 
     # Blind screening score of the tailored result. If the evaluator found
     # honestly fixable wording and the single bounded retry wasn't already
     # spent on review findings, spend it here and re-review + re-score.
-    score = evaluate(request, tailored_profil_tex, common, anschreiben=anschreiben)
+    score = evaluate(request, tailored_profil_tex, common, router, anschreiben=anschreiben)
     if score.fixable and not review_retried:
         instruction = "Match-Evaluation (Blind-Screening) fand ehrlich hebbare Punkte:\n" + "\n".join(
             f"- {item}" for item in score.fixable
         )
-        anschreiben, tailored_profil_tex = write(request, profil_tex, common, fit, retry_instruction=instruction)
-        result = review(anschreiben, tailored_profil_tex, profil_tex, common)
-        score = evaluate(request, tailored_profil_tex, common, anschreiben=anschreiben)
+        anschreiben, tailored_profil_tex = write(
+            request, profil_tex, common, fit, router, retry_instruction=instruction, target_rate=target_rate
+        )
+        result = review(anschreiben, tailored_profil_tex, profil_tex, common, router)
+        score = evaluate(request, tailored_profil_tex, common, router, anschreiben=anschreiben)
 
     return ComposedApplication(
         fit_analysis=fit,

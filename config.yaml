@@ -154,3 +154,30 @@ applications_repo:
 
 application_writer:
   base_url: "http://jobscout-application-writer.jobscout.svc.cluster.local"
+
+# Which LLM backend/model each application-writer pipeline stage uses.
+# pipeline.py has no knowledge of concrete CLI commands or providers -- it
+# only ever asks the router for "the backend configured for stage X" (see
+# application_writer/llm/). ClaudeCliBackend is the default everywhere:
+# a deliberate choice for a personal, low-volume system billed against a
+# CLI subscription rather than a metered API (see
+# application_writer/llm/claude_cli_backend.py). Swapping a stage to
+# codex, or to a future API-based backend, is a config change here, not a
+# code change. See ROADMAP.md #2/#3.
+llm:
+  backends:
+    claude:
+      type: claude-cli
+      model: sonnet
+      timeout_seconds: 180
+
+    codex:
+      type: codex-cli
+      model: auto
+      timeout_seconds: 180
+
+  stages:
+    analysis: claude
+    writing: claude
+    review: claude
+    scoring: claude

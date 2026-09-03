@@ -226,6 +226,17 @@ Application-writer's Claude usage still draws from the same subscription
 quota as the candidate's interactive sessions (unchanged from before), worth
 keeping in mind if usage limits ever get tight.
 
+### 3b. Codex CLI auth -- optional, only needed if a stage uses it
+
+The image ships the Codex CLI (`@openai/codex`) alongside Claude Code's, but
+the shipped `config.yaml` doesn't route any pipeline stage to
+`CodexCliBackend` by default (see ROADMAP.md #2) -- so this step is only
+needed if that changes. Codex's own login (`codex login`, ChatGPT-based,
+not an API key) would need the same one-time-interactive-session-into-a-
+throwaway-pod treatment as 3a above, with its credentials mounted at
+`CODEX_HOME` instead of `CLAUDE_CODE_OAUTH_TOKEN`. Not set up yet -- do
+this when a stage actually needs it, not preemptively.
+
 ## 4. jobscout-obsidian-writer secrets
 
 ```bash

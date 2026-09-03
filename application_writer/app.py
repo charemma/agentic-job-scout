@@ -38,6 +38,7 @@ NTFY_TOPIC = os.environ["NTFY_TOPIC"]
 NTFY_TOKEN = os.environ["NTFY_TOKEN"]
 
 TARGET_RATE_EUR_PER_HOUR = int(os.environ.get("TARGET_RATE_EUR_PER_HOUR", "100"))
+CANDIDATE_NAME = os.environ.get("CANDIDATE_NAME", "Candidate")
 
 app = FastAPI(title="application-writer")
 
@@ -127,6 +128,7 @@ def compose(
         tailored_profil_tex=composed.tailored_profil_tex,
         pdf_bytes=pdf_bytes,
         target_rate=TARGET_RATE_EUR_PER_HOUR,
+        candidate_name=CANDIDATE_NAME,
         match_score=composed.match_score,
     )
 

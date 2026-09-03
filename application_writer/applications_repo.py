@@ -91,6 +91,7 @@ def write_and_commit(
     pdf_bytes: bytes,
     target_rate: int,
     match_score: MatchScore | None = None,
+    candidate_name: str = "Candidate",
 ) -> None:
     app_dir = repo_path / "applications" / request.id
     app_dir.mkdir(parents=True, exist_ok=True)
@@ -102,7 +103,7 @@ def write_and_commit(
         _render_anschreiben_md(request, anschreiben, target_rate), encoding="utf-8"
     )
     (app_dir / "profil.tex").write_text(tailored_profil_tex, encoding="utf-8")
-    (app_dir / "Lebenslauf_Candidate_Name.pdf").write_bytes(pdf_bytes)
+    (app_dir / f"Lebenslauf_{candidate_name}.pdf").write_bytes(pdf_bytes)
 
     subprocess.run(["git", "-C", str(repo_path), "add", f"applications/{request.id}"], check=True)
     subprocess.run(

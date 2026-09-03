@@ -17,27 +17,31 @@ Agentic Job Scout started as a way to improve a recurring personal workflow and 
 
 ### 1. Clean public reference version
 
-- Add the missing MIT LICENSE file.
-- Restore a green GitHub Actions workflow and add a CI badge to the README.
-- Replace internal hostnames, filesystem paths, repository names, and personal service URLs with documented placeholders.
-- Remove stale references to private agent names and renamed files.
-- Replace real portal responses in test fixtures with synthetic or fully anonymized data.
-- Reduce dated debugging history in source comments; keep comments focused on current design decisions.
-- Document portal connectors neutrally and make compliance with portal terms the operator's responsibility.
+**Status: mostly done, one item outstanding.**
 
-**Done when:** an unauthenticated reader can understand the repository without access to any private sibling project, and the default branch has a green CI status.
+- [x] Add the missing MIT LICENSE file.
+- [x] Restore a green GitHub Actions workflow and add a CI badge to the README.
+- [x] Replace internal hostnames, filesystem paths, repository names, and personal service URLs with documented placeholders.
+- [x] Remove stale references to private agent names and renamed files.
+- [x] Replace real portal responses in test fixtures with synthetic or fully anonymized data.
+- [ ] Reduce dated debugging history in source comments; keep comments focused on current design decisions. Not done -- source comments still carry a lot of dated "found on 2026-08-xx" narrative from real development history, kept deliberately so the repo reads as a genuine project rather than a scrubbed snapshot. Worth a pass to trim the least useful ones, but that's a judgment call on a case-by-case basis, not a mechanical find-and-replace.
+- [x] Document portal connectors neutrally and make compliance with portal terms the operator's responsibility.
+
+**Done when:** an unauthenticated reader can understand the repository without access to any private sibling project, and the default branch has a green CI status. (Both true as of the backend-abstraction work in item 2.)
 
 ### 2. Pluggable LLM backends
 
-Introduce a small provider-independent interface instead of calling `claude_cli.complete()` directly from the pipeline.
+**Status: architecture done, two of four backends implemented.** `pipeline.py` now calls `router.for_stage(<stage>)` instead of `claude_cli.complete()` directly (see `application_writer/llm/`), and which backend/model handles each stage is a `config.yaml` change, not a code change -- confirmed by tests that route the writer through one fake backend and the reviewer through another with no `pipeline.py` changes. `ClaudeCliBackend` (the default), `CodexCliBackend`, and a `FakeBackend` for tests exist and are covered by contract tests against fake executables -- no paid or live model calls happen in the test suite. `AnthropicApiBackend` and `OpenAIApiBackend` are not implemented yet (see "Later" below); the interface was designed so adding them doesn't require touching `pipeline.py`.
+
+`CodexCliBackend` has a caveat worth knowing about: `codex exec` has no flag to fully disable tool/shell use the way `claude -p --tools ""` does, so it runs as a bounded coding agent under `--sandbox read-only` rather than a true stateless completion. Its live success path also hasn't been exercised against a real `codex exec` run in this repo's dev environment (the CLI login was broken when this was built) -- only the failure-path event shape was verified live. See the module's docstring for specifics.
 
 Planned backends:
 
-- `ClaudeCliBackend`
-- `CodexCliBackend`
-- `AnthropicApiBackend`
-- `OpenAIApiBackend`
-- deterministic fake backend for tests and local demos
+- `ClaudeCliBackend` -- done
+- `CodexCliBackend` -- done, with the caveats above
+- `AnthropicApiBackend` -- not started
+- `OpenAIApiBackend` -- not started
+- deterministic fake backend for tests and local demos -- done (`FakeBackend`)
 
 Keep backend selection separate from model selection. Configure both per pipeline stage:
 
@@ -61,6 +65,8 @@ llm:
     scoring: codex
 ```
 
+This example routes review/scoring to Codex to illustrate the capability -- the actual `config.yaml` shipped in this repo routes every stage to `claude` (see "Deliberate default" below), since Codex hasn't been exercised against a live successful run here yet.
+
 Every backend should return one normalized result containing:
 
 - generated text
@@ -70,6 +76,8 @@ Every backend should return one normalized result containing:
 - provider metadata and usage information when available
 
 **Done when:** each stage can use a different configured backend without changes to `pipeline.py`, and all backend contract tests run without paid model calls.
+
+**Deliberate default: CLI subscription billing, not a metered API.** Every stage in the shipped `config.yaml` uses `ClaudeCliBackend`, which shells out to `claude -p` and bills against a Claude Code subscription rather than per-token API pricing (see `claude_cli_backend.py`'s docstring). That's the right tradeoff for what this actually is: one person's low-volume personal job-search pipeline, running a handful of times a day. It is not the right tradeoff for a shared or high-volume deployment -- many concurrent users, or a much higher request rate, would hit CLI-subprocess overhead and per-session limits long before a metered API would become the more expensive option. `AnthropicApiBackend` / `OpenAIApiBackend` (see "Later") exist in the roadmap specifically for that case, not because the CLI approach is a stopgap to be replaced -- both are meant to coexist, selected per deployment shape via config.
 
 ### 3. Cross-model review and evaluation
 

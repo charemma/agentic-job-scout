@@ -1,5 +1,7 @@
 # agentic-job-scout
 
+[![Build and Push Container Images](https://github.com/charemma/agentic-job-scout/actions/workflows/build.yml/badge.svg)](https://github.com/charemma/agentic-job-scout/actions/workflows/build.yml)
+
 Agentic Job Scout is a self-hosted LLM pipeline I built to improve my own job-search and application workflow while deepening my practical experience with LLM-based systems.
 
 The project turns a recurring manual process into a structured, traceable workflow: it collects new job postings, evaluates them against a configurable candidate profile, and prepares tailored application drafts for promising matches. Analysis, drafting, factual review, and blind scoring are implemented as separate LLM stages with structured outputs and bounded feedback loops. Every application remains subject to human review; the system supports the process but never submits anything automatically.
@@ -51,6 +53,26 @@ This is a deterministic, role-separated LLM workflow, not an autonomous multi-ag
 Everything specific to a candidate -- background, hard requirements, edge cases -- lives in one file: `application_writer/rules/candidate-profile.md`. The LLM reads it as context before judging or drafting anything. Swap that file (and the keywords in `config.yaml`) and the same pipeline runs for someone else, no code changes needed.
 
 The version in this repo is a sanitized example, not my real profile -- name, rate, and client history are placeholders. The logic is the real thing though.
+
+## Choosing the LLM backend
+
+`pipeline.py` doesn't know what provider or CLI it's talking to -- it asks a small router for "the backend configured for this stage" (`analysis`, `writing`, `review`, `scoring`) and gets back a normalized result. Which backend and model each stage uses is a `config.yaml` change, under `llm:`:
+
+```yaml
+llm:
+  backends:
+    claude:
+      type: claude-cli
+      model: sonnet
+      timeout_seconds: 180
+  stages:
+    analysis: claude
+    writing: claude
+    review: claude
+    scoring: claude
+```
+
+Every stage uses `ClaudeCliBackend` by default, which shells out to `claude -p` and bills against a Claude Code subscription rather than a metered API. That's a deliberate choice for what this actually is -- one person's low-volume personal pipeline, not a shared service. A `CodexCliBackend` also exists (same idea, `codex exec` instead) if you want to route a stage to a different model for comparison; see `application_writer/llm/codex_cli_backend.py` for the caveats (Codex has no pure completion-only mode, unlike Claude's `--tools ""`). API-key-based backends for shared or high-volume deployments are planned but not built yet -- see [ROADMAP.md](ROADMAP.md).
 
 ## Running it
 

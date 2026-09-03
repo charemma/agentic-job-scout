@@ -23,7 +23,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))  # running this script directly doesn't put the repo root on sys.path
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright  # noqa: E402 -- must follow the sys.path insert above
 
 from scanner.fetchers.linkedin import USER_AGENT  # noqa: E402 -- must follow the sys.path insert above
 

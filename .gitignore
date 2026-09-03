@@ -13,3 +13,10 @@ result-*
 config.local.yaml
 linkedin_storage_state.json
 xing_storage_state.json
+
+# Generated application drafts belong in the separate audit-trail repo
+# (APPLICATIONS_REPO_PATH / applications_repo.clone_url), never in this
+# one -- ignored here defensively in case local config ever points that
+# path at this repo's own working tree by mistake.
+/applications/
+/bewerbungen/

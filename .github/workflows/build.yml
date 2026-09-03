@@ -62,7 +62,7 @@ jobs:
       - uses: docker/metadata-action@v5
         id: meta
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/jobscout-${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/agentic-job-scout-${{ matrix.service }}
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-,format=short
@@ -98,7 +98,7 @@ jobs:
         run: |
           for service in scanner application-writer obsidian-writer; do
             kustomize edit set image \
-              ghcr.io/charemma/jobscout-${service}=ghcr.io/charemma/jobscout-${service}:sha-${{ needs.build-and-push.outputs.short_sha }}
+              ghcr.io/charemma/agentic-job-scout-${service}=ghcr.io/charemma/agentic-job-scout-${service}:sha-${{ needs.build-and-push.outputs.short_sha }}
           done
 
       - name: Commit and push tag bump

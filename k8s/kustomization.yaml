@@ -8,12 +8,12 @@ resources:
 - obsidian-writer-deployment.yaml
 - obsidian-writer-service.yaml
 images:
-- name: ghcr.io/charemma/jobscout-application-writer
-  newName: ghcr.io/charemma/jobscout-application-writer
-  newTag: sha-897776a
-- name: ghcr.io/charemma/jobscout-obsidian-writer
-  newName: ghcr.io/charemma/jobscout-obsidian-writer
-  newTag: sha-897776a
-- name: ghcr.io/charemma/jobscout-scanner
-  newName: ghcr.io/charemma/jobscout-scanner
-  newTag: sha-897776a
+- name: ghcr.io/charemma/agentic-job-scout-application-writer
+  newName: ghcr.io/charemma/agentic-job-scout-application-writer
+  newTag: latest
+- name: ghcr.io/charemma/agentic-job-scout-obsidian-writer
+  newName: ghcr.io/charemma/agentic-job-scout-obsidian-writer
+  newTag: latest
+- name: ghcr.io/charemma/agentic-job-scout-scanner
+  newName: ghcr.io/charemma/agentic-job-scout-scanner
+  newTag: latest
